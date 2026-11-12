@@ -12,7 +12,9 @@ from typing import Any
 
 from p6.modelo import Prediccion
 
-_CAMPOS_OBLIGATORIOS = (
+#: Reutilizado por `p6.metricas` para la cobertura de trazabilidad (G5) sobre eventos
+#: recalculados desde JSONL (dicts), no solo sobre instancias de `Evento` en memoria.
+CAMPOS_EVENTO_OBLIGATORIOS = (
     "event_id",
     "run_id",
     "frame_id",
@@ -49,7 +51,7 @@ def evento_completo(evento: Evento) -> bool:
     """R4.1/G5: todos los campos de identidad presentes, y la prediccion coherente con
     el estado (ok -> hay prediction; error -> no la hay, zona sin_puntuacion)."""
     datos = evento.a_dict()
-    if any(not datos.get(campo) for campo in _CAMPOS_OBLIGATORIOS):
+    if any(not datos.get(campo) for campo in CAMPOS_EVENTO_OBLIGATORIOS):
         return False
     if evento.status == "ok":
         return evento.prediction is not None and evento.confidence_zone != "sin_puntuacion"
