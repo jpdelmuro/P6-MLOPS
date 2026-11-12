@@ -1,0 +1,5 @@
+# Fuente visual: carpeta de imagenes reproducida como stream.
+# frecuencia_ms: tiempo declarado entre cuadros consecutivos (R1.1 pide una politica
+# de muestreo documentada, no un valor universal impuesto por la rubrica).
+carpeta: datos/stream/normal
+frecuencia_ms: 500

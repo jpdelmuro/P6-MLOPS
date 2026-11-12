@@ -1,0 +1,12 @@
+# Reglas de alerta (R5.1). Las condiciones/ventanas viven en confianza.yaml; aqui solo
+# se declara la identidad, severidad y accion sugerida de cada regla.
+version: 1
+reglas:
+  - id: baja-confianza-v1
+    tipo: baja_confianza
+    severidad: warning
+    accion_sugerida: "Revisar la captura vinculada, iluminacion y preprocesamiento del cuadro."
+  - id: cambio-sostenido-v1
+    tipo: cambio_sostenido
+    severidad: warning
+    accion_sugerida: "Investigar un posible cambio sostenido de confianza frente a la referencia."

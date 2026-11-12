@@ -1,0 +1,16 @@
+[project]
+name = "p6-mlops"
+version = "0.1.0"
+description = "Proyecto 6 - Centro de monitoreo de computer vision (entrega individual)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,6 @@
+# Identidad del modelo (R1.3): preentrenado publico, sin entrenamiento propio.
+modelo_ref: torchvision.models.resnet18
+pesos: ResNet18_Weights.IMAGENET1K_V1
+clases_ref: imagenet-1k (1000 clases, segun los pesos de torchvision)
+preprocesamiento: resize-256+center-crop-224+normalize-imagenet (transform oficial de los pesos)
+entorno: CPU, torch/torchvision segun requirements.txt

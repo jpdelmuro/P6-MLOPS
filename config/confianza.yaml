@@ -1,0 +1,9 @@
+# Politica de confianza (R3). 0.60/0.80 son el punto de partida sugerido por la guia;
+# se confirman o ajustan con la corrida de referencia (ver evidencias/metricas) antes
+# de congelar C1/C2.
+umbral_inferior: 0.60
+umbral_superior: 0.80
+tamano_ventana: 10 # cuantas observaciones entran en una ventana de evaluacion
+minimo_muestras: 5 # bajo esto, una ventana es "evidencia insuficiente", nunca "normal"
+margen_cambio_sostenido: 0.20 # cuanto debe subir la tasa de baja confianza sobre la referencia
+ventanas_sostenidas: 3 # ventanas consecutivas por encima del margen para alertar (persistencia)
