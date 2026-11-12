@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block contenido %}
+<form method="get">
+  <label>Corrida:
+    <select name="run_id" onchange="this.form.submit()">
+      {% for c in corridas %}
+      <option value="{{ c }}" {% if c == run_id %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Zona:
+    <select name="zona" onchange="this.form.submit()">
+      <option value="">(todas)</option>
+      {% for z in zonas %}
+      <option value="{{ z }}" {% if z == zona %}selected{% endif %}>{{ z }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>
+
+{% if eventos %}
+<table>
+  <tr>
+    <th>event_id</th><th>frame_id</th><th>timestamp_ms</th><th>status</th>
+    <th>zona</th><th>clase</th><th>score</th><th>imagen</th>
+  </tr>
+  {% for e in eventos %}
+  <tr>
+    <td>{{ e.event_id }}</td>
+    <td>{{ e.frame_id }}</td>
+    <td>{{ "%.1f"|format(e.timestamp_ms) }}</td>
+    <td>{{ e.status }}</td>
+    <td class="zona-{{ e.confidence_zone }}">{{ e.confidence_zone }}</td>
+    <td>{{ e.prediction.class_name if e.prediction else "-" }}</td>
+    <td>{{ "%.3f"|format(e.prediction.score) if e.prediction else "-" }}</td>
+    <td>
+      {% if e.image_ref %}<a href="/imagenes?ruta={{ e.image_ref }}">ver</a>{% else %}-{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="vacio">No hay eventos para esta corrida/zona.</p>
+{% endif %}
+{% endblock %}

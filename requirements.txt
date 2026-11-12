@@ -7,4 +7,5 @@ jinja2
 pillow
 psutil
 pytest
+httpx
 ruff

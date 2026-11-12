@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block contenido %}
+<form method="get">
+  <label>Corrida:
+    <select name="run_id" onchange="this.form.submit()">
+      {% for c in corridas %}
+      <option value="{{ c }}" {% if c == run_id %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>
+
+{% if alertas %}
+<table>
+  <tr>
+    <th>alert_id</th><th>rule_id</th><th>timestamp_ms</th><th>severity</th>
+    <th>reason</th><th>accion sugerida</th><th>eventos vinculados</th>
+  </tr>
+  {% for a in alertas %}
+  <tr>
+    <td>{{ a.alert_id }}</td>
+    <td>{{ a.rule_id }}</td>
+    <td>{{ "%.1f"|format(a.timestamp_ms) }}</td>
+    <td>{{ a.severity }}</td>
+    <td>{{ a.reason }}</td>
+    <td>{{ a.suggested_action }}</td>
+    <td>
+      {% for eid in a.event_ids %}
+        {% set ev = eventos_por_id.get(eid) %}
+        {% if ev and ev.image_ref %}
+          <a href="/imagenes?ruta={{ ev.image_ref }}">{{ eid }}</a>
+        {% else %}
+          {{ eid }}
+        {% endif %}{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="vacio">No hay alertas para esta corrida.</p>
+{% endif %}
+{% endblock %}

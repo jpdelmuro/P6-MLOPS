@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block contenido %}
+<p>Corridas disponibles en <code>evidencias/escenarios/</code>:</p>
+{% if corridas %}
+<ul>
+  {% for c in corridas %}
+  <li>
+    <strong>{{ c }}</strong> --
+    <a href="/eventos?run_id={{ c }}">eventos</a> /
+    <a href="/alertas?run_id={{ c }}">alertas</a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="vacio">No hay corridas todavia. Corre <code>scripts/ejecutar_corrida.py</code> primero.</p>
+{% endif %}
+{% endblock %}
