@@ -1,8 +1,12 @@
-# Politica de confianza (R3). 0.60/0.80 son el punto de partida sugerido por la guia;
-# se confirman o ajustan con la corrida de referencia (ver evidencias/metricas) antes
-# de congelar C1/C2.
-umbral_inferior: 0.60
-umbral_superior: 0.80
+# Politica de confianza (R3). Umbrales calibrados con la corrida de referencia real
+# sobre datos/stream/normal (9 fotos, clasificador preentrenado resnet18/ImageNet-1k,
+# ver evidencias/metricas/calibracion-confianza.md): scores ordenados
+# 0.072, 0.086, 0.296, 0.463, 0.520, 0.523, 0.587, 0.778, 0.995.
+# Los dos saltos mas grandes de la distribucion quedan entre 0.296-0.463 y 0.587-0.778;
+# los umbrales se fijan en el punto medio de cada salto (no en 0.60/0.80, que son solo
+# el ejemplo de la guia, no un valor exigido).
+umbral_inferior: 0.38
+umbral_superior: 0.68
 tamano_ventana: 10 # cuantas observaciones entran en una ventana de evaluacion
 minimo_muestras: 5 # bajo esto, una ventana es "evidencia insuficiente", nunca "normal"
 margen_cambio_sostenido: 0.20 # cuanto debe subir la tasa de baja confianza sobre la referencia
