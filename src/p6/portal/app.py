@@ -25,6 +25,7 @@ from p6.metricas import (
     Medicion,
     antiguedad_ultimo_frame,
     distribucion_confianza,
+    distribucion_predicciones_por_clase,
     tiempo_inferencia_p50,
     uso_recursos_promedio,
 )
@@ -185,6 +186,7 @@ def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
     conteo_zonas = Counter(e["confidence_zone"] for e in eventos)
     scores = [e["prediction"]["score"] if e.get("prediction") else None for e in eventos]
     histograma = distribucion_confianza(scores)
+    distribucion_clases = distribucion_predicciones_por_clase(eventos)
     conteo_alertas = Counter(a["rule_id"] for a in alertas)
 
     mediciones = _cargar_mediciones(run_id)
@@ -198,6 +200,7 @@ def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
             "total_eventos": len(eventos),
             "conteo_zonas": dict(conteo_zonas),
             "histograma": histograma,
+            "distribucion_clases": distribucion_clases,
             "g1_p50": g1_p50,
             "g2_antiguedad": g2_antiguedad,
             "g3_uso": g3_uso,

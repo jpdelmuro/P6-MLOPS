@@ -190,6 +190,41 @@ def distribucion_confianza(
     )
 
 
+# --- Extra M-02: distribucion de predicciones por clase ------------------------
+#
+# Otra metrica adicional de G4 (catalogo: "Predicciones por clase"), distinta de la
+# base (proporcion_baja_confianza) y del extra M-01 (distribucion_confianza): esta
+# mide QUE clases salieron, no que tan seguro estuvo el modelo. No confunde conteo
+# con acierto -- es la distribucion real de las predicciones crudas.
+
+
+@dataclass(frozen=True)
+class DistribucionClases:
+    conteos: dict[str, int]  # class_name -> cuantas veces aparecio
+    sin_puntuacion: int
+    total: int
+
+
+def distribucion_predicciones_por_clase(
+    eventos: list[dict[str, Any]],
+) -> DistribucionClases | None:
+    """Poblacion: todos los eventos de la corrida. Exclusiones: los eventos con
+    `status == "error"` (sin `prediction`, fallo de lectura de imagen) se cuentan
+    aparte en `sin_puntuacion` -- nunca como una clase mas."""
+    if not eventos:
+        return None
+    conteos: dict[str, int] = {}
+    sin_puntuacion = 0
+    for evento in eventos:
+        prediccion = evento.get("prediction")
+        if prediccion is None:
+            sin_puntuacion += 1
+            continue
+        clase = prediccion["class_name"]
+        conteos[clase] = conteos.get(clase, 0) + 1
+    return DistribucionClases(conteos=conteos, sin_puntuacion=sin_puntuacion, total=len(eventos))
+
+
 # --- G5: cobertura de trazabilidad --------------------------------------------
 
 

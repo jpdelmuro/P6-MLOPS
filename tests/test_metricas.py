@@ -11,6 +11,7 @@ from p6.metricas import (
     antiguedad_ultimo_frame,
     cobertura_trazabilidad,
     distribucion_confianza,
+    distribucion_predicciones_por_clase,
     tiempo_inferencia_p50,
     uso_recursos_promedio,
     version_reportada_vs_esperada,
@@ -97,6 +98,43 @@ def test_distribucion_confianza_excluye_sin_puntuacion_de_los_bins():
     assert sum(resultado.conteos) == 1
     assert resultado.sin_puntuacion == 2
     assert resultado.total == 3
+
+
+# --- Extra M-02: distribucion de predicciones por clase ------------------------
+
+
+def _evento_con_clase(clase=None, status="ok"):
+    prediction = {"class_id": 1, "class_name": clase, "score": 0.9} if clase else None
+    if prediction is None:
+        status = "error"
+    return {"status": status, "prediction": prediction}
+
+
+def test_distribucion_predicciones_por_clase_sin_eventos_es_none():
+    assert distribucion_predicciones_por_clase([]) is None
+
+
+def test_distribucion_predicciones_por_clase_cuenta_exacto():
+    eventos = [
+        _evento_con_clase("Persian cat"),
+        _evento_con_clase("Persian cat"),
+        _evento_con_clase("tricycle"),
+    ]
+    resultado = distribucion_predicciones_por_clase(eventos)
+    assert resultado.conteos == {"Persian cat": 2, "tricycle": 1}
+    assert resultado.sin_puntuacion == 0
+    assert resultado.total == 3
+
+
+def test_distribucion_predicciones_por_clase_excluye_eventos_sin_prediccion():
+    eventos = [
+        _evento_con_clase("Persian cat"),
+        _evento_con_clase(None),  # fallo de lectura, sin prediction
+    ]
+    resultado = distribucion_predicciones_por_clase(eventos)
+    assert resultado.conteos == {"Persian cat": 1}
+    assert resultado.sin_puntuacion == 1
+    assert resultado.total == 2
 
 
 # --- G5 -----------------------------------------------------------------------

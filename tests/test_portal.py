@@ -179,6 +179,7 @@ def test_dashboard_muestra_zonas_histograma_y_alertas(tmp_path, monkeypatch):
     assert respuesta.status_code == 200
     assert ">2<" in respuesta.text  # total_eventos
     assert "baja-confianza-v1" in respuesta.text
+    assert "goldfish" in respuesta.text and "tiger shark" in respuesta.text  # extra M-02
 
     import shutil
 

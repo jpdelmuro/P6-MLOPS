@@ -137,14 +137,17 @@ Definiciones completas (M1) en `src/p6/metricas.py::CATALOGO_BASE`.
 
 ## Extras (puntos adicionales)
 
-Tres elementos distintos, inventario completo con evidencia en
+Cuatro elementos distintos, inventario completo con evidencia en
 `evidencias/extras/inventario.md`:
 
 - **M-01 -- Distribucion de confianza:** `distribucion_confianza` en
   `src/p6/metricas.py`, histograma de scores distinto de la metrica base de G4.
+- **M-02 -- Distribucion de predicciones por clase:**
+  `distribucion_predicciones_por_clase` en `src/p6/metricas.py` -- cuenta QUE
+  clases salieron, distinto de M-01 (que tan seguro estuvo el modelo).
 - **F-01 -- Dashboard del portal:** `/dashboard?run_id=...`, conteos por zona,
-  G1/G3, el histograma de M-01 y alertas por regla, con estados vacios/erroneos
-  manejados y probados.
+  G1/G2/G3, los histogramas de M-01/M-02 y alertas por regla, con estados
+  vacios/erroneos manejados y probados.
 - **S-01 -- Interrupcion y reconexion real de la fuente:**
   `src/p6/reconexion.py::FuenteConReconexion` + `scripts/escenario_reconexion.py`
   -- interrumpe de verdad el acceso a la carpeta de origen a mitad de una
@@ -161,7 +164,7 @@ ruff format --check .
 pytest -q
 ```
 
-144 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
+147 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
 cada push/PR a `main`.
 
 ## Limites conocidos

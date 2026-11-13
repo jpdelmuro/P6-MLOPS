@@ -75,6 +75,21 @@
 <p class="vacio">Sin scores para graficar.</p>
 {% endif %}
 
+<h2>Predicciones por clase (extra M-02)</h2>
+{% if distribucion_clases and distribucion_clases.conteos %}
+{% set max_conteo = distribucion_clases.conteos.values()|max %}
+{% for clase, conteo in distribucion_clases.conteos.items()|sort(attribute="1", reverse=True) %}
+<div class="hist-fila">
+  <span class="hist-etiqueta">{{ clase }}</span>
+  <span class="hist-barra-fondo"><span class="hist-barra" style="width: {{ (conteo / max_conteo * 100) if max_conteo else 0 }}%"></span></span>
+  <span class="hist-conteo">{{ conteo }}</span>
+</div>
+{% endfor %}
+<p class="vacio">sin_puntuacion: {{ distribucion_clases.sin_puntuacion }} de {{ distribucion_clases.total }} eventos (excluidos, sin prediction)</p>
+{% else %}
+<p class="vacio">Sin predicciones para graficar.</p>
+{% endif %}
+
 <h2>Alertas por regla</h2>
 {% if conteo_alertas %}
 <table>

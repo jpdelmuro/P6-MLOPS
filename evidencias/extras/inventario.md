@@ -1,6 +1,6 @@
 # Inventario de adicionales reclamados
 
-Tres elementos distintos, cada uno con ID unico, tipo, nivel solicitado y
+Cuatro elementos distintos, cada uno con ID unico, tipo, nivel solicitado y
 evidencia propia. Ninguno reemplaza ni renombra un requisito base: R2, R3.3,
 R4.3 y R6 ya estan acreditados sin depender de estos extras (ver
 `evidencias/indice.md`).
@@ -25,6 +25,34 @@ R4.3 y R6 ya estan acreditados sin depender de estos extras (ver
     `[0,.2)=1 [.2,.4)=4 [.4,.6)=1 [.6,.8)=2 [.8,1]=2`, que coinciden exactamente
     con los 10 scores de `evidencias/escenarios/run-c2-baja/eventos.jsonl`.
 
+## M-02 -- Distribucion de predicciones por clase
+
+- **Tipo:** M (metrica adicional).
+- **Nivel solicitado:** 5 ("Calculo derivado o por ventana -- tasa, proporcion
+  o distribucion -- con poblacion, exclusiones y ausencia de datos tratadas y
+  recalculo comprobable").
+- **Distincion de la metrica base y de M-01:** la base de G4 es
+  `proporcion_baja_confianza` (cuantos scores caen bajo el umbral); M-01 es
+  `distribucion_confianza` (histograma de los SCORES). Este extra,
+  `distribucion_predicciones_por_clase`, mide algo distinto de ambas: QUE
+  clases salio prediciendo el modelo, no que tan seguro estuvo. Las tres son
+  calculos independientes sobre los mismos eventos, cada una con su propia
+  poblacion/exclusiones -- el catalogo de G4 de la guia lista "Predicciones
+  por clase" y "Distribucion de confianza" como indicadores separados.
+- **Evidencia:**
+  - Implementacion: `src/p6/metricas.py::distribucion_predicciones_por_clase`.
+  - Poblacion/exclusiones: todos los eventos de la corrida; los eventos con
+    `status == "error"` (sin `prediction`, fallo de lectura de imagen) se
+    cuentan aparte en `sin_puntuacion`, nunca como una clase mas.
+  - Calculo anclado: `tests/test_metricas.py` (3 pruebas: vacio, conteo exacto,
+    exclusion de eventos sin prediccion).
+  - Recalculo comprobable con datos reales: visible en vivo en
+    `/dashboard?run_id=run-c2-baja` -- `Egyptian cat=2, Siamese cat=2,
+    Pekinese=1, kelpie=1, Staffordshire bullterrier=1, Labrador retriever=1,
+    bloodhound=1, Sussex spaniel=1`, `sin_puntuacion=0 de 10`, que coincide
+    exactamente con las 10 predicciones de
+    `evidencias/escenarios/run-c2-baja/eventos.jsonl`.
+
 ## F-01 -- Dashboard del portal
 
 - **Tipo:** F (funcionalidad opcional).
@@ -37,8 +65,8 @@ R4.3 y R6 ya estan acreditados sin depender de estos extras (ver
   - Parametrizado por `run_id` (selector, igual que `/eventos` y `/alertas`).
   - Persistencia real: lee `AlmacenEventos`/`AlmacenAlertas` (SQLite) y
     `mediciones.jsonl` de la corrida -- nada mockeado.
-  - Contenido: conteo de eventos por zona, G1 (tiempo de inferencia p50), G3
-    (uso de recursos), el histograma de M-01 y alertas agrupadas por regla.
+  - Contenido: conteo de eventos por zona, G1/G2/G3, el histograma de M-01,
+    la distribucion de clases de M-02 y alertas agrupadas por regla.
   - Estados vacios/erroneos verificados por prueba, no solo por inspeccion:
     `tests/test_portal.py::test_sin_corridas_las_vistas_no_fallan`,
     `test_dashboard_corrida_sin_eventos_no_falla`,
@@ -47,9 +75,10 @@ R4.3 y R6 ya estan acreditados sin depender de estos extras (ver
     200 con G1/G3 identicos, al momento de cada corrida, al recalculo de
     `evidencias/metricas/recalculo-metricas.md` (son telemetria real: cambian
     de una corrida a otra, por eso no se fija aqui un valor puntual).
-  - No cobra doble por el histograma: M-01 es la aportacion de la metrica
-    (calculo, poblacion, exclusiones); F-01 es la aportacion de mostrarla
-    integrada a un flujo de consulta parametrizado junto con otras metricas.
+  - No cobra doble por lo que muestra: M-01 y M-02 son la aportacion de cada
+    metrica (calculo, poblacion, exclusiones); F-01 es la aportacion de
+    mostrarlas integradas a un flujo de consulta parametrizado junto con las
+    demas metricas.
 
 ## S-01 -- Interrupcion y reconexion real de la fuente
 

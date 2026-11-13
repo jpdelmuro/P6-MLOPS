@@ -78,10 +78,11 @@ solicitado, evidencia) de cada uno:
 | ID | Tipo | Elemento | Nivel solicitado |
 |---|---|---|---|
 | M-01 | Metrica adicional | Distribucion de confianza (histograma) | 5 |
+| M-02 | Metrica adicional | Distribucion de predicciones por clase | 5 |
 | F-01 | Funcionalidad opcional | Dashboard del portal | 10 |
 | S-01 | Escenario adicional | Interrupcion y reconexion real de la fuente | 8 |
 
 ## Verificacion tecnica
 
-`ruff check .`, `ruff format --check .` y `pytest -q` (144 pruebas) en verde;
+`ruff check .`, `ruff format --check .` y `pytest -q` (147 pruebas) en verde;
 CI (`.github/workflows/ci.yml`) corre lo mismo en cada push/PR a `main`.
