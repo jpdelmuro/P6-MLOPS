@@ -20,6 +20,15 @@
     label { margin-right: 1rem; }
     select { background: #1b1e26; color: #e6e6e6; border: 1px solid #333; padding: 0.2rem; }
     .vacio { color: #999; font-style: italic; margin-top: 1rem; }
+    .tarjetas { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
+    .tarjeta { background: #1b1e26; border: 1px solid #333; border-radius: 6px; padding: 0.8rem 1.2rem; min-width: 180px; }
+    .tarjeta h3 { margin: 0 0 0.3rem; font-size: 0.8rem; color: #999; font-weight: 600; text-transform: uppercase; }
+    .tarjeta .valor { font-size: 1.4rem; font-weight: 700; }
+    .hist-fila { display: flex; align-items: center; gap: 0.6rem; margin: 0.2rem 0; font-size: 0.85rem; }
+    .hist-etiqueta { width: 7rem; }
+    .hist-barra-fondo { flex: 1; background: #1b1e26; border-radius: 3px; overflow: hidden; height: 1rem; }
+    .hist-barra { background: #8ab4f8; height: 100%; }
+    .hist-conteo { width: 2.5rem; text-align: right; }
   </style>
 </head>
 <body>
@@ -27,6 +36,7 @@
     <a href="/">Inicio</a>
     <a href="/eventos">Eventos</a>
     <a href="/alertas">Alertas</a>
+    <a href="/dashboard">Dashboard</a>
   </nav>
   <h1>{{ titulo }}</h1>
   {% block contenido %}{% endblock %}

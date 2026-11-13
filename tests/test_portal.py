@@ -158,3 +158,41 @@ def test_sin_corridas_las_vistas_no_fallan(tmp_path, monkeypatch):
     assert cliente.get("/").status_code == 200
     assert cliente.get("/eventos").status_code == 200
     assert cliente.get("/alertas").status_code == 200
+    respuesta = cliente.get("/dashboard")
+    assert respuesta.status_code == 200
+    assert "No hay ninguna corrida disponible" in respuesta.text
+
+
+def test_dashboard_muestra_zonas_histograma_y_alertas(tmp_path, monkeypatch):
+    carpeta_imagenes, _ = _preparar_corrida(tmp_path, monkeypatch)
+    cliente = TestClient(app)
+    respuesta = cliente.get("/dashboard", params={"run_id": "run-1"})
+    assert respuesta.status_code == 200
+    assert ">2<" in respuesta.text  # total_eventos
+    assert "baja-confianza-v1" in respuesta.text
+
+    import shutil
+
+    shutil.rmtree(carpeta_imagenes)
+
+
+def test_dashboard_corrida_sin_eventos_no_falla(tmp_path, monkeypatch):
+    base = tmp_path / "escenarios"
+    (base / "run-vacio").mkdir(parents=True)
+    monkeypatch.setenv("P6_EVIDENCIAS_DIR", str(base))
+    cliente = TestClient(app)
+    respuesta = cliente.get("/dashboard", params={"run_id": "run-vacio"})
+    assert respuesta.status_code == 200
+    assert "no hay eventos registrados" in respuesta.text.lower()
+
+
+def test_dashboard_sin_mediciones_reporta_sin_datos_en_g1_g3(tmp_path, monkeypatch):
+    carpeta_imagenes, _ = _preparar_corrida(tmp_path, monkeypatch)
+    cliente = TestClient(app)
+    respuesta = cliente.get("/dashboard", params={"run_id": "run-1"})
+    assert respuesta.status_code == 200
+    assert "sin datos" in respuesta.text.lower()
+
+    import shutil
+
+    shutil.rmtree(carpeta_imagenes)

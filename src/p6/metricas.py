@@ -142,6 +142,45 @@ def uso_recursos_promedio(mediciones: list[Medicion]) -> UsoRecursos | None:
 # lo cual la rubrica permite explicitamente).
 
 
+# --- Extra M: distribucion de confianza (histograma) --------------------------
+#
+# Metrica adicional de G4, distinta de la metrica base (proporcion_baja_confianza):
+# un histograma de puntuaciones, no un escalar. No confunde el histograma con
+# probabilidad de acierto -- es la frecuencia de scores crudos, sin evaluacion de
+# calidad predictiva.
+
+
+@dataclass(frozen=True)
+class DistribucionConfianza:
+    bins: tuple[tuple[float, float], ...]
+    conteos: tuple[int, ...]
+    sin_puntuacion: int
+    total: int
+
+
+def distribucion_confianza(
+    scores: list[float | None], n_bins: int = 5
+) -> DistribucionConfianza | None:
+    """Poblacion: todas las observaciones de la ventana/corrida. Exclusiones: los
+    `None` (sin puntuacion, por ejemplo por fallo de inferencia) se cuentan aparte
+    en `sin_puntuacion` y no entran en ningun bin -- nunca se tratan como score 0."""
+    if not scores:
+        return None
+    ancho = 1 / n_bins
+    bins = tuple((round(i * ancho, 4), round((i + 1) * ancho, 4)) for i in range(n_bins))
+    conteos = [0] * n_bins
+    sin_puntuacion = 0
+    for s in scores:
+        if s is None:
+            sin_puntuacion += 1
+            continue
+        indice = min(int(s / ancho), n_bins - 1)  # score == 1.0 cae en el ultimo bin
+        conteos[indice] += 1
+    return DistribucionConfianza(
+        bins=bins, conteos=tuple(conteos), sin_puntuacion=sin_puntuacion, total=len(scores)
+    )
+
+
 # --- G5: cobertura de trazabilidad --------------------------------------------
 
 

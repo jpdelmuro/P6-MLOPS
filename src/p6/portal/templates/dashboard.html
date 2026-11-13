@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block contenido %}
+<form method="get">
+  <label>Corrida:
+    <select name="run_id" onchange="this.form.submit()">
+      {% for c in corridas %}
+      <option value="{{ c }}" {% if c == run_id %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>
+
+{% if not hay_datos %}
+<p class="vacio">
+  {% if run_id %}No hay eventos registrados para "{{ run_id }}" todavia.
+  {% else %}No hay ninguna corrida disponible. Ejecuta scripts/ejecutar_corrida.py primero.
+  {% endif %}
+</p>
+{% else %}
+
+<div class="tarjetas">
+  <div class="tarjeta">
+    <h3>Eventos totales</h3>
+    <div class="valor">{{ total_eventos }}</div>
+  </div>
+  <div class="tarjeta">
+    <h3>Aceptada</h3>
+    <div class="valor zona-aceptada">{{ conteo_zonas.get("aceptada", 0) }}</div>
+  </div>
+  <div class="tarjeta">
+    <h3>Duda</h3>
+    <div class="valor zona-duda">{{ conteo_zonas.get("duda", 0) }}</div>
+  </div>
+  <div class="tarjeta">
+    <h3>Baja confianza</h3>
+    <div class="valor zona-baja_confianza">{{ conteo_zonas.get("baja_confianza", 0) }}</div>
+  </div>
+  <div class="tarjeta">
+    <h3>Alertas</h3>
+    <div class="valor">{{ total_alertas }}</div>
+  </div>
+  <div class="tarjeta">
+    <h3>G1 - tiempo de inferencia (p50)</h3>
+    <div class="valor">
+      {% if g1_p50 is not none %}{{ "%.2f"|format(g1_p50) }} ms{% else %}sin datos{% endif %}
+    </div>
+  </div>
+  <div class="tarjeta">
+    <h3>G3 - RAM / CPU promedio</h3>
+    <div class="valor">
+      {% if g3_uso is not none %}{{ "%.1f"|format(g3_uso.ram_mb_promedio) }} MB / {{ "%.1f"|format(g3_uso.cpu_percent_promedio) }}%{% else %}sin datos{% endif %}
+    </div>
+  </div>
+</div>
+
+<h2>Distribucion de confianza (extra M)</h2>
+{% if histograma %}
+{% set max_conteo = histograma.conteos|max %}
+{% for bin in histograma.bins %}
+{% set conteo = histograma.conteos[loop.index0] %}
+<div class="hist-fila">
+  <span class="hist-etiqueta">[{{ "%.2f"|format(bin[0]) }}, {{ "%.2f"|format(bin[1]) }}{{ ")" if not loop.last else "]" }}</span>
+  <span class="hist-barra-fondo"><span class="hist-barra" style="width: {{ (conteo / max_conteo * 100) if max_conteo else 0 }}%"></span></span>
+  <span class="hist-conteo">{{ conteo }}</span>
+</div>
+{% endfor %}
+<p class="vacio">sin_puntuacion: {{ histograma.sin_puntuacion }} de {{ histograma.total }} observaciones (excluidas del histograma)</p>
+{% else %}
+<p class="vacio">Sin scores para graficar.</p>
+{% endif %}
+
+<h2>Alertas por regla</h2>
+{% if conteo_alertas %}
+<table>
+  <tr><th>rule_id</th><th>conteo</th></tr>
+  {% for rule_id, n in conteo_alertas.items() %}
+  <tr><td>{{ rule_id }}</td><td>{{ n }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="vacio">No hay alertas en esta corrida.</p>
+{% endif %}
+
+{% endif %}
+{% endblock %}

@@ -10,6 +10,7 @@ from p6.metricas import (
     alertas_activas_en_ventana,
     antiguedad_ultimo_frame,
     cobertura_trazabilidad,
+    distribucion_confianza,
     tiempo_inferencia_p50,
     uso_recursos_promedio,
     version_reportada_vs_esperada,
@@ -72,6 +73,30 @@ def test_uso_recursos_promedio_calcula_promedios_exactos():
     assert resultado.cpu_percent_promedio == 15.0
     assert resultado.ram_mb_promedio == 150.0
     assert resultado.muestras == 2
+
+
+# --- Extra M: distribucion de confianza ----------------------------------------
+
+
+def test_distribucion_confianza_sin_scores_es_none():
+    assert distribucion_confianza([]) is None
+
+
+def test_distribucion_confianza_cuenta_en_el_bin_correcto():
+    # 5 bins de ancho 0.2: [0,.2) [.2,.4) [.4,.6) [.6,.8) [.8,1.0]
+    scores = [0.05, 0.19, 0.5, 0.95, 1.0]
+    resultado = distribucion_confianza(scores, n_bins=5)
+    assert resultado.bins == ((0.0, 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.0))
+    assert resultado.conteos == (2, 0, 1, 0, 2)
+    assert resultado.sin_puntuacion == 0
+    assert resultado.total == 5
+
+
+def test_distribucion_confianza_excluye_sin_puntuacion_de_los_bins():
+    resultado = distribucion_confianza([0.9, None, None], n_bins=5)
+    assert sum(resultado.conteos) == 1
+    assert resultado.sin_puntuacion == 2
+    assert resultado.total == 3
 
 
 # --- G5 -----------------------------------------------------------------------

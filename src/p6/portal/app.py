@@ -8,7 +8,9 @@ subcarpeta por `run_id` (por defecto `evidencias/escenarios`, la misma que usa
 
 from __future__ import annotations
 
+import json
 import os
+from collections import Counter
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -17,6 +19,12 @@ from fastapi.templating import Jinja2Templates
 
 from p6.alertas import AlmacenAlertas
 from p6.eventos import AlmacenEventos
+from p6.metricas import (
+    Medicion,
+    distribucion_confianza,
+    tiempo_inferencia_p50,
+    uso_recursos_promedio,
+)
 
 RAIZ = Path(__file__).resolve().parents[3]
 ZONAS = ("aceptada", "duda", "baja_confianza", "sin_puntuacion")
@@ -112,6 +120,70 @@ def ver_alertas(request: Request, run_id: str | None = None) -> HTMLResponse:
             "corridas": listar_corridas(),
         },
     )
+
+
+def _cargar_mediciones(run_id: str) -> list[Medicion]:
+    ruta = _base_evidencias() / run_id / "mediciones.jsonl"
+    if not ruta.exists():
+        return []
+    with ruta.open() as archivo:
+        return [Medicion(**json.loads(linea)) for linea in archivo if linea.strip()]
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
+    """Extra F: vista agregada de una corrida -- conteo por zona, tiempo de inferencia
+    (G1), uso de recursos (G3), distribucion de confianza (extra M) y alertas por regla.
+    Parametrizada por `run_id`; maneja de forma explicita la corrida sin datos y la
+    ausencia de `mediciones.jsonl` (no todas las corridas antiguas lo tienen)."""
+    run_id = run_id or _run_id_por_defecto()
+    contexto: dict = {
+        "titulo": "Dashboard",
+        "run_id": run_id,
+        "corridas": listar_corridas(),
+        "hay_datos": False,
+    }
+    if run_id is None:
+        return templates.TemplateResponse(request, "dashboard.html", contexto)
+
+    ruta_eventos, ruta_alertas = _rutas_db(run_id)
+    if not ruta_eventos.exists():
+        return templates.TemplateResponse(request, "dashboard.html", contexto)
+
+    almacen_eventos = AlmacenEventos(ruta_eventos)
+    eventos = almacen_eventos.listar(run_id=run_id)
+    almacen_eventos.cerrar()
+    if not eventos:
+        return templates.TemplateResponse(request, "dashboard.html", contexto)
+
+    alertas: list[dict] = []
+    if ruta_alertas.exists():
+        almacen_alertas = AlmacenAlertas(ruta_alertas)
+        alertas = almacen_alertas.listar()
+        almacen_alertas.cerrar()
+
+    conteo_zonas = Counter(e["confidence_zone"] for e in eventos)
+    scores = [e["prediction"]["score"] if e.get("prediction") else None for e in eventos]
+    histograma = distribucion_confianza(scores)
+    conteo_alertas = Counter(a["rule_id"] for a in alertas)
+
+    mediciones = _cargar_mediciones(run_id)
+    g1_p50 = tiempo_inferencia_p50(mediciones) if mediciones else None
+    g3_uso = uso_recursos_promedio(mediciones) if mediciones else None
+
+    contexto.update(
+        {
+            "hay_datos": True,
+            "total_eventos": len(eventos),
+            "conteo_zonas": dict(conteo_zonas),
+            "histograma": histograma,
+            "g1_p50": g1_p50,
+            "g3_uso": g3_uso,
+            "total_alertas": len(alertas),
+            "conteo_alertas": dict(conteo_alertas),
+        }
+    )
+    return templates.TemplateResponse(request, "dashboard.html", contexto)
 
 
 @app.get("/imagenes")
