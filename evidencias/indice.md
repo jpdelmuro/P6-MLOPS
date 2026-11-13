@@ -44,7 +44,7 @@ actualizacion del indice.
 | Criterio | Archivo / comando | Resultado |
 |---|---|---|
 | R4.1 | `src/p6/eventos.py` (`Evento`, `CAMPOS_EVENTO_OBLIGATORIOS`) | Evento completo: identidad, `timestamp_ms` (posicion sintetica en el stream) + `fecha_utc` (fecha/hora real, ISO-8601 UTC), fuente, modelo, estado, prediccion, zona de confianza, y `config_ref` como huella real de la configuracion (hash de `confianza.yaml`+`alertas.yaml`+`modelo.yaml`, no un texto fijo -- ver `p6.orquestador.calcular_config_ref`). `tests/test_eventos.py` verifica cobertura de campos. |
-| R4.2 | `src/p6/portal/app.py` (`/eventos`), `tests/test_portal.py`, `evidencias/portal/recorrido.md` | Eventos consultables y filtrables por corrida/zona en el portal, leidos directo de la base SQLite de la corrida. Recorrido reproducible (URLs reales) en `recorrido.md`. |
+| R4.2 | `src/p6/portal/app.py` (`/eventos`), `tests/test_portal.py`, `evidencias/portal/recorrido.md` | Eventos consultables y filtrables por corrida/zona en el portal, leidos directo de la base SQLite de la corrida; la tabla muestra `fecha_utc`, `model_ref` y `config_ref` ademas de la identidad/prediccion. Recorrido reproducible (URLs reales) en `recorrido.md`. |
 | R4.3 | `src/p6/capturas.py` (`PoliticaCapturas`) | Captura siempre en baja confianza o alerta, mas muestreo periodico en operacion normal; nunca sobreescribe ni borra. Evidencia real: `evidencias/escenarios/run-c1-normal/imagenes/`, `evidencias/escenarios/run-c2-baja/imagenes/`. |
 
 ## R5 -- Alertas (15 pts)
@@ -52,8 +52,8 @@ actualizacion del indice.
 | Criterio | Archivo / comando | Resultado |
 |---|---|---|
 | R5.1 | `config/alertas.yaml`, `src/p6/alertas.py` (`MotorAlertas`) | Cuatro reglas explicitas (`baja-confianza-v1`, `cambio-sostenido-v1`, y `fuente-interrumpida-v1`/`fuente-reconectada-v1` del extra S-01) con condicion, severidad y accion sugerida declaradas. |
-| R5.2 | `evidencias/escenarios/run-c1-normal/alertas.jsonl`, `evidencias/escenarios/run-c2-baja/alertas.jsonl` | Alertas generadas desde eventos reales de las corridas C1/C2, cada una vinculada a su `event_id`, `config_ref` y motivo. |
-| R5.3 | `src/p6/portal/app.py` (`/alertas`), `tests/test_portal.py`, `evidencias/portal/recorrido.md` | Alertas visibles en el portal con momento, motivo, severidad, accion sugerida y enlace a la imagen del evento vinculado. |
+| R5.2 | `evidencias/escenarios/run-c1-normal/alertas.jsonl`, `evidencias/escenarios/run-c2-baja/alertas.jsonl` | Alertas generadas desde eventos reales de las corridas C1/C2, cada una vinculada a su `event_id`, `config_ref` y motivo. El motivo de `baja-confianza-v1` incluye el score y el umbral reales (ej. "Score 0.282 por debajo del umbral inferior 0.38"), no un texto generico -- `src/p6/alertas.py::MotorAlertas.evaluar_evento`, probado en `tests/test_alertas.py` y `test_orquestador.py`. |
+| R5.3 | `src/p6/portal/app.py` (`/alertas`), `tests/test_portal.py`, `evidencias/portal/recorrido.md` | Alertas visibles en el portal con momento (`timestamp_ms` + `fecha_utc` real), motivo, severidad, accion sugerida y enlace a la imagen del evento vinculado. |
 
 ## R6 -- Demostracion obligatoria (10 pts)
 
@@ -83,5 +83,5 @@ solicitado, evidencia) de cada uno:
 
 ## Verificacion tecnica
 
-`ruff check .`, `ruff format --check .` y `pytest -q` (141 pruebas) en verde;
+`ruff check .`, `ruff format --check .` y `pytest -q` (144 pruebas) en verde;
 CI (`.github/workflows/ci.yml`) corre lo mismo en cada push/PR a `main`.

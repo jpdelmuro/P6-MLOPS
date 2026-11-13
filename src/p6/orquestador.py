@@ -117,7 +117,13 @@ def procesar_frame(
     score = prediccion.score if prediccion is not None else None
     zona = zona_de(score, cfg_confianza) if status == "ok" else "sin_puntuacion"
 
-    alerta_evento = motor_alertas.evaluar_evento(event_id, zona, frame.timestamp_ms)
+    alerta_evento = motor_alertas.evaluar_evento(
+        event_id,
+        zona,
+        frame.timestamp_ms,
+        score=score,
+        umbral_inferior=cfg_confianza.umbral_inferior,
+    )
     captura, _razon = capturas.debe_capturar(zona, alerta_disparada=alerta_evento is not None)
     image_ref = capturas.capturar(event_id, frame.ruta) if captura else None
 

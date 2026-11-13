@@ -54,6 +54,32 @@ def test_evaluar_evento_en_zona_aceptada_no_genera_alerta():
     assert motor.evaluar_evento("evt-1", zona="aceptada", timestamp_ms=1000.0) is None
 
 
+def test_evaluar_evento_con_score_y_umbral_da_un_motivo_especifico():
+    motor = MotorAlertas(CFG_ALERTAS, config_ref="config-v1")
+    alerta = motor.evaluar_evento(
+        "evt-1", zona="baja_confianza", timestamp_ms=1000.0, score=0.123, umbral_inferior=0.38
+    )
+    assert alerta is not None
+    assert "0.123" in alerta.reason
+    assert "0.38" in alerta.reason
+
+
+def test_evaluar_evento_sin_score_mantiene_el_motivo_generico():
+    motor = MotorAlertas(CFG_ALERTAS, config_ref="config-v1")
+    alerta = motor.evaluar_evento("evt-1", zona="baja_confianza", timestamp_ms=1000.0)
+    assert alerta is not None
+    assert alerta.reason == "Se cumplio la condicion configurada de baja confianza."
+
+
+def test_alerta_tiene_fecha_utc_real():
+    import re
+
+    motor = MotorAlertas(CFG_ALERTAS, config_ref="config-v1")
+    alerta = motor.evaluar_evento("evt-1", zona="baja_confianza", timestamp_ms=1000.0)
+    assert alerta is not None
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T", alerta.fecha_utc)
+
+
 def test_evaluar_evento_en_zona_duda_no_genera_alerta():
     motor = MotorAlertas(CFG_ALERTAS, config_ref="config-v1")
     assert motor.evaluar_evento("evt-1", zona="duda", timestamp_ms=1000.0) is None

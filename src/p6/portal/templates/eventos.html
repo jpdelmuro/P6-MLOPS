@@ -21,18 +21,22 @@
 {% if eventos %}
 <table>
   <tr>
-    <th>event_id</th><th>frame_id</th><th>timestamp_ms</th><th>status</th>
-    <th>zona</th><th>clase</th><th>score</th><th>imagen</th>
+    <th>event_id</th><th>frame_id</th><th>timestamp_ms</th><th>fecha_utc</th>
+    <th>status</th><th>zona</th><th>clase</th><th>score</th>
+    <th>modelo</th><th>config_ref</th><th>imagen</th>
   </tr>
   {% for e in eventos %}
   <tr>
     <td>{{ e.event_id }}</td>
     <td>{{ e.frame_id }}</td>
     <td>{{ "%.1f"|format(e.timestamp_ms) }}</td>
+    <td>{{ e.fecha_utc[:19] if e.fecha_utc else "-" }}</td>
     <td>{{ e.status }}</td>
     <td class="zona-{{ e.confidence_zone }}">{{ e.confidence_zone }}</td>
     <td>{{ e.prediction.class_name if e.prediction else "-" }}</td>
     <td>{{ "%.3f"|format(e.prediction.score) if e.prediction else "-" }}</td>
+    <td>{{ e.model_ref }}</td>
+    <td>{{ e.config_ref }}</td>
     <td>
       {% if e.image_ref %}<a href="/imagenes?ruta={{ e.image_ref }}">ver</a>{% else %}-{% endif %}
     </td>

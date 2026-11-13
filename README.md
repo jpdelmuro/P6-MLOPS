@@ -161,7 +161,7 @@ ruff format --check .
 pytest -q
 ```
 
-141 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
+144 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
 cada push/PR a `main`.
 
 ## Limites conocidos

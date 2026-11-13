@@ -129,6 +129,10 @@ def test_evento_en_baja_confianza_dispara_alerta_vinculada(tmp_path):
     assert len(alertas) == 1
     evento_id = resultado.almacen_eventos.listar(run_id="run-baja")[0]["event_id"]
     assert alertas[0]["event_ids"] == [evento_id]
+    # Motivo con el score y el umbral reales de esta corrida (R5.2/R5.3), no un texto
+    # generico que no diga por que disparo.
+    assert "0.30" in alertas[0]["reason"]
+    assert f"{CFG_CONFIANZA.umbral_inferior:.2f}" in alertas[0]["reason"]
     resultado.almacen_eventos.cerrar()
     resultado.almacen_alertas.cerrar()
 

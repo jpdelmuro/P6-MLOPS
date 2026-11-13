@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,16 +16,23 @@ from p6.confianza import ResultadoVentana
 from p6.config import ConfigAlertas
 
 
+def _ahora_utc_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
 @dataclass(frozen=True)
 class Alerta:
     alert_id: str
     rule_id: str
-    timestamp_ms: float
+    timestamp_ms: float  # posicion sintetica en el stream, igual que Evento.timestamp_ms
     severity: str
     event_ids: tuple[str, ...]
     config_ref: str
     reason: str
     suggested_action: str
+    #: Fecha/hora real (UTC, ISO-8601) en que se genero la alerta -- mismo motivo que
+    #: Evento.fecha_utc (R4.1/R5.3): timestamp_ms es sintetico, no un reloj de pared.
+    fecha_utc: str = field(default_factory=_ahora_utc_iso)
 
     def a_dict(self) -> dict[str, Any]:
         datos = asdict(self)
@@ -47,10 +55,21 @@ class MotorAlertas:
         self._contador += 1
         return f"alert-{prefijo}-{self._contador:04d}"
 
-    def evaluar_evento(self, event_id: str, zona: str, timestamp_ms: float) -> Alerta | None:
+    def evaluar_evento(
+        self,
+        event_id: str,
+        zona: str,
+        timestamp_ms: float,
+        score: float | None = None,
+        umbral_inferior: float | None = None,
+    ) -> Alerta | None:
         regla = self._cfg.regla("baja_confianza")
         if regla is None or zona != "baja_confianza":
             return None
+        if score is not None and umbral_inferior is not None:
+            reason = f"Score {score:.3f} por debajo del umbral inferior {umbral_inferior:.2f}."
+        else:
+            reason = "Se cumplio la condicion configurada de baja confianza."
         return Alerta(
             alert_id=self._siguiente_id("bc"),
             rule_id=regla.id,
@@ -58,7 +77,7 @@ class MotorAlertas:
             severity=regla.severidad,
             event_ids=(event_id,),
             config_ref=self._config_ref,
-            reason="Se cumplio la condicion configurada de baja confianza.",
+            reason=reason,
             suggested_action=regla.accion_sugerida,
         )
 

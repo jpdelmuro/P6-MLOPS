@@ -13,14 +13,15 @@
 {% if alertas %}
 <table>
   <tr>
-    <th>alert_id</th><th>rule_id</th><th>timestamp_ms</th><th>severity</th>
-    <th>reason</th><th>accion sugerida</th><th>eventos vinculados</th>
+    <th>alert_id</th><th>rule_id</th><th>timestamp_ms</th><th>fecha_utc</th>
+    <th>severity</th><th>reason</th><th>accion sugerida</th><th>eventos vinculados</th>
   </tr>
   {% for a in alertas %}
   <tr>
     <td>{{ a.alert_id }}</td>
     <td>{{ a.rule_id }}</td>
     <td>{{ "%.1f"|format(a.timestamp_ms) }}</td>
+    <td>{{ a.fecha_utc[:19] if a.fecha_utc else "-" }}</td>
     <td>{{ a.severity }}</td>
     <td>{{ a.reason }}</td>
     <td>{{ a.suggested_action }}</td>
