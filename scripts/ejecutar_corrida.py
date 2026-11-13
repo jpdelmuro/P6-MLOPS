@@ -10,8 +10,9 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -61,10 +62,16 @@ def main() -> None:
     resultado.almacen_eventos.cerrar()
     resultado.almacen_alertas.cerrar()
 
+    mediciones_jsonl = carpeta_evidencias / "mediciones.jsonl"
+    with mediciones_jsonl.open("w") as f:
+        for medicion in resultado.mediciones:
+            f.write(json.dumps(asdict(medicion)) + "\n")
+
     print(f"run_id={resultado.run_id} total_frames={resultado.total_frames}")
-    print(f"eventos  -> {eventos_jsonl}")
-    print(f"alertas  -> {alertas_jsonl}")
-    print(f"imagenes -> {carpeta_evidencias / 'imagenes'}")
+    print(f"eventos    -> {eventos_jsonl}")
+    print(f"alertas    -> {alertas_jsonl}")
+    print(f"mediciones -> {mediciones_jsonl}")
+    print(f"imagenes   -> {carpeta_evidencias / 'imagenes'}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,9 @@
+{"frame_id": "normal_0000", "timestamp_ms": 89.80054105632007, "duracion_inferencia_ms": 20.994791062548757, "cpu_percent": 0.0, "ram_mb": 383.109375}
+{"frame_id": "normal_0001", "timestamp_ms": 589.8005410563201, "duracion_inferencia_ms": 19.962750026024878, "cpu_percent": 127.0, "ram_mb": 383.1875}
+{"frame_id": "normal_0002", "timestamp_ms": 1089.80054105632, "duracion_inferencia_ms": 19.78579198475927, "cpu_percent": 130.7, "ram_mb": 383.203125}
+{"frame_id": "normal_0003", "timestamp_ms": 1589.80054105632, "duracion_inferencia_ms": 13.186707976274192, "cpu_percent": 143.4, "ram_mb": 386.578125}
+{"frame_id": "normal_0004", "timestamp_ms": 2089.80054105632, "duracion_inferencia_ms": 17.71308295428753, "cpu_percent": 133.4, "ram_mb": 386.578125}
+{"frame_id": "normal_0005", "timestamp_ms": 2589.80054105632, "duracion_inferencia_ms": 18.100291956216097, "cpu_percent": 134.3, "ram_mb": 386.609375}
+{"frame_id": "normal_0006", "timestamp_ms": 3089.80054105632, "duracion_inferencia_ms": 17.59045897051692, "cpu_percent": 132.6, "ram_mb": 386.609375}
+{"frame_id": "normal_0007", "timestamp_ms": 3589.80054105632, "duracion_inferencia_ms": 15.944665996357799, "cpu_percent": 139.3, "ram_mb": 386.625}
+{"frame_id": "normal_0008", "timestamp_ms": 4089.80054105632, "duracion_inferencia_ms": 17.103041987866163, "cpu_percent": 136.0, "ram_mb": 386.625}

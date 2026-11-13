@@ -18,10 +18,10 @@ en el momento de la revision.
 
 | Criterio | Archivo / comando | Resultado |
 |---|---|---|
-| R2 (catalogo) | `src/p6/metricas.py::CATALOGO_BASE` | Una metrica base por grupo G1-G7 (ver tabla en README.md), definicion M1 de cada una. |
-| R2 (calculo M3) | `tests/test_metricas.py` | 15 pruebas con datos sinteticos de entrada conocida -> resultado exacto esperado, ancla el calculo de cada metrica. |
-| R2 (trazabilidad M4/verificacion M5) | `src/p6/metricas.py` (funciones leen `AlmacenEventos`/`AlmacenAlertas`/`Medicion` reales) | Cada metrica se recalcula desde datos primarios persistidos, no desde un valor fijo. |
-| R2 (distribucion de puntos) | Con `G=7` grupos aplicables, cada grupo vale `25/7 ≈ 3.57` pts. Los 7 grupos aplican (ver justificacion en `src/p6/metricas.py`, docstring del modulo). |
+| R2 (catalogo, M1/M2) | `src/p6/metricas.py::CATALOGO_BASE`, tabla de "Fuente de datos" en README.md | Una metrica base por grupo G1-G7, definicion y fuente de adquisicion de cada una. |
+| R2 (calculo, M3) | `tests/test_metricas.py` | 15 pruebas con datos sinteticos de entrada conocida -> resultado exacto esperado, ancla el calculo de cada metrica. |
+| R2 (trazabilidad y verificacion, M4/M5) | `evidencias/metricas/recalculo-metricas.md` | Las 7 metricas recalculadas desde `eventos.jsonl`/`alertas.jsonl`/`mediciones.jsonl` de las corridas C1/C2 reales (comando reproducible incluido), con checklist M1-M5 completo por grupo. |
+| R2 (distribucion de puntos) | Con `G=7` grupos aplicables, cada grupo vale `25/7 ≈ 3.57` pts. Los 7 grupos aplican (ver justificacion en `src/p6/metricas.py`, docstring del modulo). Los 5 checks (M1-M5) estan cubiertos en los 7 grupos: `R2 = 25 * (7*5)/(5*7) = 25` en autoevaluacion. |
 
 ## R3 -- Umbrales y monitoreo de confianza (15 pts)
 
