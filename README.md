@@ -87,7 +87,7 @@ El portal lee directamente las bases SQLite que produce cada corrida -- hay que
 correr al menos una corrida antes de levantarlo (las `.db` no estan en el repo).
 
 ```bash
-P6_EVIDENCIAS_DIR=evidencias/escenarios uvicorn p6.portal.app:app --reload
+PYTHONPATH=src P6_EVIDENCIAS_DIR=evidencias/escenarios uvicorn p6.portal.app:app --reload
 ```
 
 Abre `http://127.0.0.1:8000/` -- lista las corridas disponibles, `/eventos`
