@@ -255,3 +255,76 @@ def test_inicio_no_lista_carpetas_de_documentacion(tmp_path, monkeypatch):
     import shutil
 
     shutil.rmtree(carpeta_imagenes)
+
+
+# --- Extra F-02: /comparar -------------------------------------------------
+
+
+def test_comparar_sin_corridas_no_falla(tmp_path, monkeypatch):
+    monkeypatch.setenv("P6_EVIDENCIAS_DIR", str(tmp_path / "vacio"))
+    cliente = TestClient(app)
+    respuesta = cliente.get("/comparar")
+    assert respuesta.status_code == 200
+    assert "No hay ninguna corrida disponible" in respuesta.text
+
+
+def test_comparar_dos_corridas_muestra_metricas_de_ambas(tmp_path, monkeypatch):
+    import shutil
+
+    carpeta_a, _ = _preparar_corrida(tmp_path, monkeypatch, run_id="run-a")
+    carpeta_b, _ = _preparar_corrida(tmp_path, monkeypatch, run_id="run-b")
+    cliente = TestClient(app)
+    respuesta = cliente.get("/comparar", params={"run_a": "run-a", "run_b": "run-b"})
+    assert respuesta.status_code == 200
+    assert "run-a" in respuesta.text and "run-b" in respuesta.text
+    assert ">2<" in respuesta.text  # total_eventos de cada corrida
+    assert "50.0%" in respuesta.text  # tasa_baja_confianza: 1 de 2 eventos
+    # mismo model_ref/config_ref en ambas (la fixture los deja iguales): sin aviso.
+    assert "no comparten la misma identidad" not in respuesta.text
+
+    shutil.rmtree(carpeta_a)
+    shutil.rmtree(carpeta_b)
+
+
+def test_comparar_avisa_si_la_identidad_no_coincide(tmp_path, monkeypatch):
+    base = tmp_path / "escenarios"
+    for run_id, model_ref in (("run-x", "modelo-x"), ("run-y", "modelo-y")):
+        carpeta = base / run_id
+        carpeta.mkdir(parents=True)
+        almacen = AlmacenEventos(carpeta / f"eventos-{run_id}.db")
+        almacen.registrar(
+            Evento(
+                event_id=f"evt-{run_id}",
+                run_id=run_id,
+                frame_id="f0",
+                timestamp_ms=0.0,
+                source_id="s",
+                task="classification",
+                model_ref=model_ref,
+                status="ok",
+                prediction=Prediccion(class_id=0, class_name="x", score=0.9),
+                confidence_zone="aceptada",
+                config_ref="config-v1",
+            )
+        )
+        almacen.cerrar()
+    monkeypatch.setenv("P6_EVIDENCIAS_DIR", str(base))
+
+    cliente = TestClient(app)
+    respuesta = cliente.get("/comparar", params={"run_a": "run-x", "run_b": "run-y"})
+    assert respuesta.status_code == 200
+    assert "no comparten la misma identidad" in respuesta.text
+
+
+def test_comparar_corrida_sin_eventos_no_falla(tmp_path, monkeypatch):
+    carpeta_a, _ = _preparar_corrida(tmp_path, monkeypatch, run_id="run-a")
+    base = tmp_path / "escenarios"
+    (base / "run-vacio").mkdir(parents=True)
+    cliente = TestClient(app)
+    respuesta = cliente.get("/comparar", params={"run_a": "run-a", "run_b": "run-vacio"})
+    assert respuesta.status_code == 200
+    assert "Elige dos corridas con eventos" in respuesta.text
+
+    import shutil
+
+    shutil.rmtree(carpeta_a)

@@ -58,10 +58,22 @@ responde 403, no el archivo:
 
 Vista agregada: conteo de eventos por zona, G1 (tiempo de inferencia p50), G2
 (antiguedad real del ultimo frame), G3 (uso de recursos), el histograma de
-confianza (extra M-01) y alertas por regla. Cambiar la corrida con el
-selector reconsulta todo en vivo.
+confianza (extra M-01), la distribucion de predicciones por clase (extra
+M-02) y alertas por regla. Cambiar la corrida con el selector reconsulta
+todo en vivo.
 
 ![Dashboard](capturas/04-dashboard.png)
+
+## 7. Comparar corridas (extra F-02) -- `GET /comparar?run_a=run-c1-normal&run_b=run-c2-baja`
+
+Contrasta dos corridas lado a lado: eventos por zona, tasa de baja confianza
+(G4, resaltada la mayor), G1, G3, alertas, y la identidad de modelo/config de
+cada una. Si `model_ref` o `config_ref` no coinciden entre las dos, muestra
+un aviso explicito en vez de comparar a ciegas series que no deberian
+compararse (la guia pide mantener esa identidad al comparar, o separar las
+series si cambian).
+
+![Comparar C1 vs C2](capturas/07-comparar.png)
 
 ## Estados verificados (no solo el camino feliz)
 
@@ -73,8 +85,14 @@ selector reconsulta todo en vivo.
 - `GET /dashboard?run_id=<corrida-sin-mediciones.jsonl>`: G1/G3 muestran
   "sin datos" en vez de un error
   (`test_dashboard_sin_mediciones_reporta_sin_datos_en_g1_g3`).
+- `GET /comparar` sin corridas, o con una corrida sin eventos: mensaje
+  explicito, no falla (`test_comparar_sin_corridas_no_falla`,
+  `test_comparar_corrida_sin_eventos_no_falla`).
+- `GET /comparar` con dos corridas de `model_ref` distinto: aviso explicito de
+  identidad, probado forzando el caso, no solo observado
+  (`test_comparar_avisa_si_la_identidad_no_coincide`).
 
-Las 15 pruebas de `tests/test_portal.py` cubren cada ruta descrita arriba con
+Las 19 pruebas de `tests/test_portal.py` cubren cada ruta descrita arriba con
 `fastapi.testclient.TestClient` sobre datos reales (nunca mockeados): son la
 evidencia "observado/reproducido" de este recorrido, ejecutable con
 `pytest tests/test_portal.py -q`.

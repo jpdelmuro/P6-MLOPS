@@ -1,6 +1,6 @@
 # Inventario de adicionales reclamados
 
-Cuatro elementos distintos, cada uno con ID unico, tipo, nivel solicitado y
+Cinco elementos distintos, cada uno con ID unico, tipo, nivel solicitado y
 evidencia propia. Ninguno reemplaza ni renombra un requisito base: R2, R3.3,
 R4.3 y R6 ya estan acreditados sin depender de estos extras (ver
 `evidencias/indice.md`).
@@ -79,6 +79,37 @@ R4.3 y R6 ya estan acreditados sin depender de estos extras (ver
     metrica (calculo, poblacion, exclusiones); F-01 es la aportacion de
     mostrarlas integradas a un flujo de consulta parametrizado junto con las
     demas metricas.
+
+## F-02 -- Comparacion entre corridas
+
+- **Tipo:** F (funcionalidad opcional).
+- **Nivel solicitado:** 10 ("Flujo compuesto con interaccion o consulta
+  parametrizada, persistencia pertinente y verificacion de resultados y
+  estados vacios/erroneos").
+- **Distincion de F-01:** F-01 muestra una sola corrida en detalle; este
+  extra es el valor de **contrastar dos corridas** (zonas, tasa de baja
+  confianza de G4, G1, G3, alertas e identidad de modelo/config) -- aportacion
+  y evidencia propias, no una reetiqueta de la misma pantalla.
+- **Alineado con la guia:** "Para comparaciones, mantener identidad de
+  modelo, preprocesamiento y configuracion; si cambian, separar las series."
+  `/comparar` calcula `model_ref`/`config_ref` de cada corrida y muestra un
+  aviso explicito si no coinciden, en vez de comparar a ciegas dos series que
+  no deberian compararse como la misma condicion.
+- **Evidencia:**
+  - Implementacion: `src/p6/portal/app.py::ver_comparar`/`_metricas_de_corrida`,
+    `src/p6/portal/templates/comparar.html`.
+  - Parametrizado por `run_a`/`run_b` (dos selectores independientes).
+  - Persistencia real: lee `AlmacenEventos`/`AlmacenAlertas` (SQLite) y
+    `mediciones.jsonl` de ambas corridas -- nada mockeado.
+  - Estados vacios/erroneos probados, no solo observados:
+    `tests/test_portal.py::test_comparar_sin_corridas_no_falla`,
+    `test_comparar_corrida_sin_eventos_no_falla`,
+    `test_comparar_avisa_si_la_identidad_no_coincide` (el aviso se prueba
+    forzando dos `model_ref` distintos, no solo con datos "felices").
+  - Observado con datos reales: `GET /comparar?run_a=run-c1-normal&run_b=run-c2-baja`
+    responde 200, muestra 33.3% vs 40.0% de tasa de baja confianza (resaltada
+    la mayor), y misma `model_ref`/`config_ref` en ambas (sin aviso, porque
+    de verdad coinciden) -- ver `evidencias/portal/capturas/07-comparar.png`.
 
 ## S-01 -- Interrupcion y reconexion real de la fuente
 

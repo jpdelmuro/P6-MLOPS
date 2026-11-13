@@ -211,6 +211,79 @@ def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
     return templates.TemplateResponse(request, "dashboard.html", contexto)
 
 
+def _metricas_de_corrida(run_id: str) -> dict | None:
+    """Resumen de una corrida para comparar (extra F-02) -- incluye config_refs/
+    model_refs para que /comparar pueda avisar si dos series no comparten identidad
+    de modelo/configuracion (la guia pide mantener esa identidad al comparar, o
+    separar las series si cambian)."""
+    ruta_eventos, ruta_alertas = _rutas_db(run_id)
+    if not ruta_eventos.exists():
+        return None
+    almacen_eventos = AlmacenEventos(ruta_eventos)
+    eventos = almacen_eventos.listar(run_id=run_id)
+    almacen_eventos.cerrar()
+    if not eventos:
+        return None
+
+    alertas: list[dict] = []
+    if ruta_alertas.exists():
+        almacen_alertas = AlmacenAlertas(ruta_alertas)
+        alertas = almacen_alertas.listar()
+        almacen_alertas.cerrar()
+
+    conteo_zonas = Counter(e["confidence_zone"] for e in eventos)
+    mediciones = _cargar_mediciones(run_id)
+    return {
+        "run_id": run_id,
+        "total_eventos": len(eventos),
+        "conteo_zonas": dict(conteo_zonas),
+        "tasa_baja_confianza": conteo_zonas.get("baja_confianza", 0) / len(eventos),
+        "g1_p50": tiempo_inferencia_p50(mediciones) if mediciones else None,
+        "g3_uso": uso_recursos_promedio(mediciones) if mediciones else None,
+        "total_alertas": len(alertas),
+        "config_refs": sorted({e["config_ref"] for e in eventos}),
+        "model_refs": sorted({e["model_ref"] for e in eventos}),
+    }
+
+
+@app.get("/comparar", response_class=HTMLResponse)
+def ver_comparar(
+    request: Request, run_a: str | None = None, run_b: str | None = None
+) -> HTMLResponse:
+    """Extra F-02: compara dos corridas lado a lado (zonas, tasa de baja confianza,
+    G1, G3, identidad de modelo/configuracion). Distinto de /dashboard (una sola
+    corrida): aqui el valor es el contraste entre dos series."""
+    corridas = listar_corridas()
+    contexto: dict = {
+        "titulo": "Comparar corridas",
+        "corridas": corridas,
+        "run_a": run_a or (corridas[0] if corridas else None),
+        "run_b": run_b or (corridas[-1] if corridas else None),
+        "hay_datos": False,
+    }
+    if not contexto["run_a"] or not contexto["run_b"]:
+        return templates.TemplateResponse(request, "comparar.html", contexto)
+
+    metricas_a = _metricas_de_corrida(contexto["run_a"])
+    metricas_b = _metricas_de_corrida(contexto["run_b"])
+    if metricas_a is None or metricas_b is None:
+        return templates.TemplateResponse(request, "comparar.html", contexto)
+
+    identidad_coincide = (
+        metricas_a["config_refs"] == metricas_b["config_refs"]
+        and metricas_a["model_refs"] == metricas_b["model_refs"]
+    )
+    contexto.update(
+        {
+            "hay_datos": True,
+            "a": metricas_a,
+            "b": metricas_b,
+            "identidad_coincide": identidad_coincide,
+        }
+    )
+    return templates.TemplateResponse(request, "comparar.html", contexto)
+
+
 @app.get("/imagenes")
 def ver_imagen(ruta: str) -> FileResponse:
     """Sirve una captura vinculada a un evento/alerta -- valida que quede dentro del

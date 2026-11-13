@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block contenido %}
+<form method="get">
+  <label>Corrida A:
+    <select name="run_a" onchange="this.form.submit()">
+      {% for c in corridas %}
+      <option value="{{ c }}" {% if c == run_a %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Corrida B:
+    <select name="run_b" onchange="this.form.submit()">
+      {% for c in corridas %}
+      <option value="{{ c }}" {% if c == run_b %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>
+
+{% if not hay_datos %}
+<p class="vacio">
+  {% if not corridas %}No hay ninguna corrida disponible. Ejecuta scripts/ejecutar_corrida.py primero.
+  {% else %}Elige dos corridas con eventos para comparar.
+  {% endif %}
+</p>
+{% else %}
+
+{% if not identidad_coincide %}
+<p class="aviso">
+  Estas dos corridas no comparten la misma identidad de modelo o configuracion
+  (`model_ref`/`config_ref` distintos) -- compáralas como series separadas, no
+  como la misma condicion con distinto resultado.
+</p>
+{% endif %}
+
+<table>
+  <tr>
+    <th></th>
+    <th class="comparar-col">{{ a.run_id }}</th>
+    <th class="comparar-col">{{ b.run_id }}</th>
+  </tr>
+  <tr>
+    <td>Eventos totales</td>
+    <td>{{ a.total_eventos }}</td>
+    <td>{{ b.total_eventos }}</td>
+  </tr>
+  <tr>
+    <td>Aceptada</td>
+    <td class="zona-aceptada">{{ a.conteo_zonas.get("aceptada", 0) }}</td>
+    <td class="zona-aceptada">{{ b.conteo_zonas.get("aceptada", 0) }}</td>
+  </tr>
+  <tr>
+    <td>Duda</td>
+    <td class="zona-duda">{{ a.conteo_zonas.get("duda", 0) }}</td>
+    <td class="zona-duda">{{ b.conteo_zonas.get("duda", 0) }}</td>
+  </tr>
+  <tr>
+    <td>Baja confianza</td>
+    <td class="zona-baja_confianza">{{ a.conteo_zonas.get("baja_confianza", 0) }}</td>
+    <td class="zona-baja_confianza">{{ b.conteo_zonas.get("baja_confianza", 0) }}</td>
+  </tr>
+  <tr>
+    <td>Tasa de baja confianza (G4)</td>
+    <td class="{{ 'comparar-destaca' if a.tasa_baja_confianza > b.tasa_baja_confianza else '' }}">{{ "%.1f"|format(a.tasa_baja_confianza * 100) }}%</td>
+    <td class="{{ 'comparar-destaca' if b.tasa_baja_confianza > a.tasa_baja_confianza else '' }}">{{ "%.1f"|format(b.tasa_baja_confianza * 100) }}%</td>
+  </tr>
+  <tr>
+    <td>G1 - tiempo de inferencia (p50)</td>
+    <td>{% if a.g1_p50 is not none %}{{ "%.2f"|format(a.g1_p50) }} ms{% else %}sin datos{% endif %}</td>
+    <td>{% if b.g1_p50 is not none %}{{ "%.2f"|format(b.g1_p50) }} ms{% else %}sin datos{% endif %}</td>
+  </tr>
+  <tr>
+    <td>G3 - RAM / CPU promedio</td>
+    <td>{% if a.g3_uso is not none %}{{ "%.1f"|format(a.g3_uso.ram_mb_promedio) }} MB / {{ "%.1f"|format(a.g3_uso.cpu_percent_promedio) }}%{% else %}sin datos{% endif %}</td>
+    <td>{% if b.g3_uso is not none %}{{ "%.1f"|format(b.g3_uso.ram_mb_promedio) }} MB / {{ "%.1f"|format(b.g3_uso.cpu_percent_promedio) }}%{% else %}sin datos{% endif %}</td>
+  </tr>
+  <tr>
+    <td>Alertas</td>
+    <td>{{ a.total_alertas }}</td>
+    <td>{{ b.total_alertas }}</td>
+  </tr>
+  <tr>
+    <td>model_ref</td>
+    <td>{{ a.model_refs|join(", ") }}</td>
+    <td>{{ b.model_refs|join(", ") }}</td>
+  </tr>
+  <tr>
+    <td>config_ref</td>
+    <td>{{ a.config_refs|join(", ") }}</td>
+    <td>{{ b.config_refs|join(", ") }}</td>
+  </tr>
+</table>
+
+{% endif %}
+{% endblock %}

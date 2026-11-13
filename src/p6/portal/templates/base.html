@@ -20,6 +20,9 @@
     label { margin-right: 1rem; }
     select { background: #1b1e26; color: #e6e6e6; border: 1px solid #333; padding: 0.2rem; }
     .vacio { color: #999; font-style: italic; margin-top: 1rem; }
+    .aviso { background: #3a2a10; border: 1px solid #a06a1a; color: #ffcc80; border-radius: 6px; padding: 0.6rem 1rem; margin-top: 1rem; }
+    .comparar-col { font-weight: 700; }
+    .comparar-destaca { color: #FF6B6B; font-weight: 700; }
     .tarjetas { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
     .tarjeta { background: #1b1e26; border: 1px solid #333; border-radius: 6px; padding: 0.8rem 1.2rem; min-width: 180px; }
     .tarjeta h3 { margin: 0 0 0.3rem; font-size: 0.8rem; color: #999; font-weight: 600; text-transform: uppercase; }
@@ -37,6 +40,7 @@
     <a href="/eventos">Eventos</a>
     <a href="/alertas">Alertas</a>
     <a href="/dashboard">Dashboard</a>
+    <a href="/comparar">Comparar</a>
   </nav>
   <h1>{{ titulo }}</h1>
   {% block contenido %}{% endblock %}
