@@ -181,6 +181,32 @@ def test_cola_final_incompleta_se_evalua_y_no_se_descarta(tmp_path):
     resultado.almacen_alertas.cerrar()
 
 
+def test_resultados_ventana_quedan_en_el_resultado_incluida_evidencia_insuficiente(tmp_path):
+    # tamano_ventana=3, minimo_muestras=3: 4 frames -> 1 ventana completa (evidencia
+    # suficiente) + 1 cola de 1 frame (evidencia insuficiente). Ambas deben quedar
+    # registradas en resultados_ventana, no solo la que alcanza a generar alerta.
+    carpeta = _crear_imagenes(tmp_path / "stream", 4)
+    cfg_fuente = ConfigFuente(carpeta=str(carpeta), frecuencia_ms=100.0)
+    clasificador = ClasificadorFalso([0.95, 0.95, 0.95, 0.95])
+
+    resultado = ejecutar_corrida(
+        run_id="run-ventanas",
+        cfg_fuente=cfg_fuente,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias",
+        clasificador=clasificador,
+    )
+    assert len(resultado.resultados_ventana) == 2
+    assert resultado.resultados_ventana[0]["evidencia_suficiente"] is True
+    assert resultado.resultados_ventana[1]["evidencia_suficiente"] is False
+    assert resultado.resultados_ventana[1]["razon"] == "evidencia_insuficiente"
+    resultado.almacen_eventos.cerrar()
+    resultado.almacen_alertas.cerrar()
+
+
 def test_imagenes_vinculadas_se_capturan_siempre_en_baja_confianza(tmp_path):
     from pathlib import Path
 
@@ -330,6 +356,60 @@ def test_model_ref_del_evento_viene_del_clasificador_no_de_la_config(tmp_path):
     esperado = f"{CFG_MODELO.modelo_ref}@{CFG_MODELO.pesos}"
     g6 = version_reportada_vs_esperada(eventos, esperado)
     assert g6.coincide is False  # G6 SI detecta la discrepancia real
+    resultado.almacen_eventos.cerrar()
+    resultado.almacen_alertas.cerrar()
+
+
+def test_tiempo_real_espera_la_frecuencia_declarada_entre_frames(tmp_path):
+    import time
+
+    # frecuencia_ms chica para que la prueba sea rapida mientras sigue siendo real:
+    # 3 frames * 0.05s = 0.15s minimo de reloj de pared, no de timestamp sintetico.
+    carpeta = _crear_imagenes(tmp_path / "stream", 3)
+    cfg_fuente = ConfigFuente(carpeta=str(carpeta), frecuencia_ms=50.0)
+    clasificador = ClasificadorFalso([0.95, 0.95, 0.95])
+
+    inicio = time.perf_counter()
+    resultado = ejecutar_corrida(
+        run_id="run-tiempo-real",
+        cfg_fuente=cfg_fuente,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias",
+        clasificador=clasificador,
+        tiempo_real=True,
+    )
+    duracion_real_s = time.perf_counter() - inicio
+
+    assert duracion_real_s >= 0.15  # de verdad espero, no solo etiqueto timestamps
+    assert resultado.total_frames == 3
+    resultado.almacen_eventos.cerrar()
+    resultado.almacen_alertas.cerrar()
+
+
+def test_sin_tiempo_real_la_corrida_es_instantanea(tmp_path):
+    import time
+
+    carpeta = _crear_imagenes(tmp_path / "stream", 3)
+    cfg_fuente = ConfigFuente(carpeta=str(carpeta), frecuencia_ms=50.0)
+    clasificador = ClasificadorFalso([0.95, 0.95, 0.95])
+
+    inicio = time.perf_counter()
+    resultado = ejecutar_corrida(
+        run_id="run-sin-tiempo-real",
+        cfg_fuente=cfg_fuente,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias",
+        clasificador=clasificador,
+        # tiempo_real=False (por defecto): nunca espera, para que siga siendo
+        # reproducible sin tiempo real por defecto.
+    )
+    assert time.perf_counter() - inicio < 0.15
     resultado.almacen_eventos.cerrar()
     resultado.almacen_alertas.cerrar()
 

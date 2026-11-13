@@ -37,6 +37,18 @@ def main() -> None:
         default="evidencias/escenarios",
         help="Relativa al directorio actual (se asume cwd = raiz del repo, igual que --stream)",
     )
+    parser.add_argument(
+        "--referencia",
+        default="evidencias/escenarios/referencia.json",
+        help="Archivo donde persiste la referencia de confianza entre corridas (R3.3) "
+        "-- una serie (ej. C1 -> C2) comparte este archivo. Vacio ('') para no persistir.",
+    )
+    parser.add_argument(
+        "--tiempo-real",
+        action="store_true",
+        help="Espera frecuencia_ms real entre frames (R1.1) en vez de solo etiquetar "
+        "timestamps sinteticos; la corrida tarda literalmente eso en completarse.",
+    )
     args = parser.parse_args()
 
     cfg_fuente = cargar_fuente(RAIZ / "config" / "fuente.yaml")
@@ -50,6 +62,7 @@ def main() -> None:
     cfg_alertas = cargar_alertas(RAIZ / "config" / "alertas.yaml")
 
     carpeta_evidencias = Path(args.evidencias) / args.run_id
+    ruta_referencia = Path(args.referencia) if args.referencia else None
     resultado = ejecutar_corrida(
         run_id=args.run_id,
         cfg_fuente=cfg_fuente,
@@ -59,6 +72,8 @@ def main() -> None:
         reloj=reloj_monotonico(),
         carpeta_evidencias=carpeta_evidencias,
         clasificador=ClasificadorPreentrenado(),
+        ruta_referencia=ruta_referencia,
+        tiempo_real=args.tiempo_real,
     )
 
     eventos_jsonl = resultado.almacen_eventos.exportar_jsonl(carpeta_evidencias / "eventos.jsonl")
@@ -71,11 +86,19 @@ def main() -> None:
         for medicion in resultado.mediciones:
             f.write(json.dumps(asdict(medicion)) + "\n")
 
+    ventanas_jsonl = carpeta_evidencias / "ventanas.jsonl"
+    with ventanas_jsonl.open("w") as f:
+        for resultado_ventana in resultado.resultados_ventana:
+            f.write(json.dumps(resultado_ventana) + "\n")
+
     print(f"run_id={resultado.run_id} total_frames={resultado.total_frames}")
     print(f"eventos    -> {eventos_jsonl}")
     print(f"alertas    -> {alertas_jsonl}")
     print(f"mediciones -> {mediciones_jsonl}")
+    print(f"ventanas   -> {ventanas_jsonl}")
     print(f"imagenes   -> {carpeta_evidencias / 'imagenes'}")
+    if ruta_referencia is not None:
+        print(f"referencia -> {ruta_referencia} (compartida entre corridas)")
 
 
 if __name__ == "__main__":

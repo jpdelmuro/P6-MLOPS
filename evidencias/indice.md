@@ -17,7 +17,7 @@ actualizacion del indice.
 
 | Criterio | Archivo / comando | Resultado |
 |---|---|---|
-| R1.1 | `config/fuente.yaml`, `src/p6/fuente.py` (`SecuenciaImagenes`) | Stream con `frecuencia_ms` declarada y documentada; `tests/test_fuente.py` cubre orden, `frame_id` unicos y timestamps. |
+| R1.1 | `config/fuente.yaml`, `src/p6/fuente.py` (`SecuenciaImagenes`) | Stream con `frecuencia_ms` declarada y documentada; `tests/test_fuente.py` cubre orden, `frame_id` unicos y timestamps. Por defecto los timestamps son sinteticos (reproducibles, instantaneos); `ejecutar_corrida(..., tiempo_real=True)` / `--tiempo-real` en el CLI espera de verdad `frecuencia_ms` de reloj de pared entre frames, probado en `tests/test_orquestador.py::test_tiempo_real_espera_la_frecuencia_declarada_entre_frames`. |
 | R1.2 | `src/p6/modelo.py` (`ClasificadorPreentrenado`), corridas C1/C2 | Inferencia real sobre las 19 imagenes de ambos escenarios; resultados en `evidencias/escenarios/{normal,baja-confianza}/resumen-corrida-*.md` y `evidencias/escenarios/run-c1-normal|run-c2-baja/eventos.jsonl`. |
 | R1.3 | `config/modelo.yaml` | Identidad: `torchvision.models.resnet18`, pesos `ResNet18_Weights.IMAGENET1K_V1`, 1000 clases ImageNet-1k, preprocesamiento oficial de los pesos, entorno CPU. |
 
@@ -28,6 +28,7 @@ actualizacion del indice.
 | R2 (catalogo, M1/M2) | `src/p6/metricas.py::CATALOGO_BASE`, tabla de "Fuente de datos" en README.md | Una metrica base por grupo G1-G7, definicion y fuente de adquisicion de cada una. |
 | R2 (calculo, M3) | `tests/test_metricas.py` | 15 pruebas con datos sinteticos de entrada conocida -> resultado exacto esperado, ancla el calculo de cada metrica. |
 | R2 (trazabilidad y verificacion, M4/M5) | `evidencias/metricas/recalculo-metricas.md` | Las 7 metricas recalculadas desde `eventos.jsonl`/`alertas.jsonl`/`mediciones.jsonl` de las corridas C1/C2 reales (comando reproducible incluido), con checklist M1-M5 completo por grupo. |
+| R2 (G6, deteccion real de discrepancias) | `src/p6/modelo.py::ClasificadorPreentrenado.model_ref`, `tests/test_orquestador.py::test_model_ref_del_evento_viene_del_clasificador_no_de_la_config` | `model_ref` del evento viene de lo que el clasificador reporta de si mismo (pesos realmente instanciados), no de `config/modelo.yaml` -- si ambos vinieran de la config, G6 nunca podria detectar una discrepancia real. Probado con un doble cuyo `model_ref` difiere a proposito: `coincide=False`. |
 | R2 (distribucion de puntos) | Con `G=7` grupos aplicables, cada grupo vale `25/7 ≈ 3.57` pts. Los 7 grupos aplican (ver justificacion en `src/p6/metricas.py`, docstring del modulo). Los 5 checks (M1-M5) estan cubiertos en los 7 grupos: `R2 = 25 * (7*5)/(5*7) = 25` en autoevaluacion. |
 
 ## R3 -- Umbrales y monitoreo de confianza (15 pts)
@@ -36,7 +37,7 @@ actualizacion del indice.
 |---|---|---|
 | R3.1 | `config/confianza.yaml`, `evidencias/metricas/calibracion-confianza.md` | Umbrales `umbral_inferior=0.38 < umbral_superior=0.68`, calibrados con una corrida de referencia real (no el ejemplo 0.60/0.80 de la guia), con comando reproducible y justificacion de los saltos observados. |
 | R3.2 | `src/p6/confianza.py` (`zona_de`), `tests/test_confianza.py` | Tres zonas (`aceptada`/`duda`/`baja_confianza`) mas `sin_puntuacion`; baja confianza se conserva en el evento (`confidence_zone`), nunca se descarta. |
-| R3.3 | `src/p6/confianza.py` (`PoliticaConfianza.evaluar_ventana`, `cargar_referencia`/`guardar_referencia`), `config/confianza.yaml` (`tamano_ventana`, `minimo_muestras`, `margen_cambio_sostenido`, `ventanas_sostenidas`) | Referencia, ventana, minimo de muestras y regla de cambio sostenido configurados y probados por unidad (`tests/test_confianza.py`); evidencia insuficiente distinguida de normalidad (ventana con menos del minimo nunca se reporta como "normal"). La referencia **persiste entre corridas** via `ejecutar_corrida(..., ruta_referencia=...)`, probado de extremo a extremo en `tests/test_orquestador.py::test_referencia_persiste_entre_corridas_via_ruta_referencia` (sin heredar la referencia, la prueba falla). No se demuestra con un tercer escenario -- la guia aclara que esa demostracion es un adicional, no un requisito base (ver README.md, "Limites conocidos"). |
+| R3.3 | `src/p6/confianza.py` (`PoliticaConfianza.evaluar_ventana`, `cargar_referencia`/`guardar_referencia`), `config/confianza.yaml` (`tamano_ventana`, `minimo_muestras`, `margen_cambio_sostenido`, `ventanas_sostenidas`) | Referencia, ventana, minimo de muestras y regla de cambio sostenido configurados y probados por unidad (`tests/test_confianza.py`); evidencia insuficiente distinguida de normalidad (ventana con menos del minimo nunca se reporta como "normal"). La referencia **persiste entre corridas reales**, no solo en pruebas: `scripts/ejecutar_corrida.py` usa `--referencia evidencias/escenarios/referencia.json` por defecto, y C2 hereda la de C1 -- ver `evidencias/escenarios/run-c1-normal/ventanas.jsonl` (`razon: referencia_fijada`) vs. `run-c2-baja/ventanas.jsonl` (`razon: dentro_de_referencia`, no vuelve a fijarse). Cada ventana evaluada (incluida "evidencia_insuficiente") queda persistida en `ventanas.jsonl`, no solo las que generan alerta. Probado de extremo a extremo en `tests/test_orquestador.py::test_referencia_persiste_entre_corridas_via_ruta_referencia`. No se demuestra `cambio_sostenido` disparando con un tercer escenario -- la guia aclara que esa demostracion es un adicional, no un requisito base (ver README.md, "Limites conocidos"). |
 
 ## R4 -- Eventos e imagenes (15 pts)
 
@@ -82,5 +83,5 @@ solicitado, evidencia) de cada uno:
 
 ## Verificacion tecnica
 
-`ruff check .`, `ruff format --check .` y `pytest -q` (123 pruebas) en verde;
+`ruff check .`, `ruff format --check .` y `pytest -q` (141 pruebas) en verde;
 CI (`.github/workflows/ci.yml`) corre lo mismo en cada push/PR a `main`.

@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 from p6.alertas import AlmacenAlertas
 from p6.eventos import AlmacenEventos
+from p6.fuente import EXTENSIONES_VALIDAS
 from p6.metricas import (
     Medicion,
     antiguedad_ultimo_frame,
@@ -210,7 +211,9 @@ def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
 @app.get("/imagenes")
 def ver_imagen(ruta: str) -> FileResponse:
     """Sirve una captura vinculada a un evento/alerta -- valida que quede dentro del
-    repositorio, nunca una ruta arbitraria del sistema de archivos."""
+    repositorio (nunca una ruta arbitraria del sistema de archivos) y que sea una
+    imagen de verdad (nunca un archivo de codigo o config del propio repo, aunque la
+    ruta este dentro de RAIZ -- ej. README.md)."""
     archivo = Path(ruta)
     if not archivo.is_absolute():
         archivo = RAIZ / archivo
@@ -218,6 +221,8 @@ def ver_imagen(ruta: str) -> FileResponse:
         archivo.resolve().relative_to(RAIZ.resolve())
     except ValueError as exc:
         raise HTTPException(status_code=403, detail="ruta fuera del repositorio") from exc
+    if archivo.suffix.lower() not in EXTENSIONES_VALIDAS:
+        raise HTTPException(status_code=403, detail="solo se sirven imagenes")
     if not archivo.exists():
         raise HTTPException(status_code=404, detail="imagen no encontrada")
     return FileResponse(archivo)

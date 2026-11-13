@@ -91,7 +91,7 @@ G7 coincide con el numero de alertas listadas en cada `alertas.jsonl`.
 | G3 | idem | `psutil.Process()` en `orquestador.py`, primera lectura de CPU descartada (`iniciar_medicion_recursos`) | `tests/test_metricas.py` (promedios exactos) | `mediciones.jsonl` | recalculo arriba |
 | G4 | idem | eventos persistidos | `tests/test_confianza.py` (misma formula que R3) | `eventos.jsonl` | recalculo arriba |
 | G5 | idem | `AlmacenEventos` | `tests/test_metricas.py` (proporcion exacta) | `eventos.jsonl` | recalculo arriba |
-| G6 | idem | `model_ref` del evento vs. `config/modelo.yaml` | `tests/test_metricas.py` | `eventos.jsonl` | recalculo arriba |
+| G6 | idem | `model_ref` del evento (real, de `ClasificadorPreentrenado.model_ref`) vs. lo declarado en `config/modelo.yaml` | `tests/test_metricas.py` + `test_orquestador.py::test_model_ref_del_evento_viene_del_clasificador_no_de_la_config` (discrepancia real detectada) | `eventos.jsonl` | recalculo arriba |
 | G7 | idem | `AlmacenAlertas` | `tests/test_metricas.py` (rango inclusivo) | `alertas.jsonl` | recalculo arriba |
 
 Los 7 grupos cubren los 5 checks (M1-M5). `R2 = 25 * (7*5)/(5*7) = 25` en

@@ -40,9 +40,12 @@ Tabla de las 4 alertas `baja-confianza-v1` de C2, cada una con `rule_id`,
 
 Clic en cualquier `event_id` de la tabla de alertas sirve el archivo real
 (`FileResponse`), validado contra la raiz del repositorio (una ruta fuera del
-repo responde 403; una ruta inexistente, 404 -- ver
-`tests/test_portal.py::test_imagenes_rechaza_ruta_fuera_del_repositorio` y
-`test_imagenes_404_si_no_existe`).
+repo responde 403) y contra una lista de extensiones de imagen validas (una
+ruta real del repo pero que no es imagen, ej. `README.md`, tambien responde
+403 -- antes del fix cualquier archivo del repo se serviria); una ruta
+inexistente responde 404. Ver
+`tests/test_portal.py::test_imagenes_rechaza_ruta_fuera_del_repositorio`,
+`test_imagenes_rechaza_archivo_que_no_es_imagen` y `test_imagenes_404_si_no_existe`.
 
 ![Imagen vinculada servida por /imagenes](capturas/05-imagen-vinculada.png)
 
@@ -71,7 +74,7 @@ selector reconsulta todo en vivo.
   "sin datos" en vez de un error
   (`test_dashboard_sin_mediciones_reporta_sin_datos_en_g1_g3`).
 
-Las 14 pruebas de `tests/test_portal.py` cubren cada ruta descrita arriba con
+Las 15 pruebas de `tests/test_portal.py` cubren cada ruta descrita arriba con
 `fastapi.testclient.TestClient` sobre datos reales (nunca mockeados): son la
 evidencia "observado/reproducido" de este recorrido, ejecutable con
 `pytest tests/test_portal.py -q`.

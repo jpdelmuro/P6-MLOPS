@@ -69,7 +69,7 @@ def main() -> None:
     motor_alertas = MotorAlertas(cfg_alertas, config_ref=config_ref)
     capturas = PoliticaCapturas(carpeta_evidencias / "imagenes")
     proceso = iniciar_medicion_recursos()
-    model_ref = f"{cfg_modelo.modelo_ref}@{cfg_modelo.pesos}"
+    model_ref = clasificador.model_ref  # identidad real (G6), no solo lo declarado
 
     bitacora: list[dict] = []
     procesados = 0

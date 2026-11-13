@@ -141,6 +141,15 @@ def test_imagenes_rechaza_ruta_fuera_del_repositorio(tmp_path, monkeypatch):
     assert respuesta.status_code == 403
 
 
+def test_imagenes_rechaza_archivo_que_no_es_imagen(tmp_path, monkeypatch):
+    _preparar_corrida(tmp_path, monkeypatch)
+    cliente = TestClient(app)
+    # README.md existe de verdad dentro del repo (pasa la validacion de ruta), pero
+    # /imagenes solo debe servir capturas reales, no codigo ni config del repo.
+    respuesta = cliente.get("/imagenes", params={"ruta": "README.md"})
+    assert respuesta.status_code == 403
+
+
 def test_imagenes_404_si_no_existe(tmp_path, monkeypatch):
     carpeta_imagenes, _ = _preparar_corrida(tmp_path, monkeypatch)
     cliente = TestClient(app)

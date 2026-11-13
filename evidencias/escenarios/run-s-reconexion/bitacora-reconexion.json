@@ -6,16 +6,16 @@
   "bitacora": [
     {
       "evento": "interrupcion_fisica",
-      "timestamp_ms": 1500.0475829001516
+      "timestamp_ms": 1500.0490839593112
     },
     {
       "evento": "fuenteerror_detectado",
-      "timestamp_ms": 1500.0475829001516,
+      "timestamp_ms": 1500.0490839593112,
       "frames_antes_de_la_caida": 4
     },
     {
       "evento": "reconexion_exitosa",
-      "timestamp_ms": 2000.0475829001516,
+      "timestamp_ms": 2000.0490839593112,
       "reanuda_en_indice": 4
     }
   ]

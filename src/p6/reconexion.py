@@ -83,7 +83,14 @@ class FuenteConReconexion:
     def __iter__(self) -> Iterator[Frame]:
         while self._siguiente_indice < len(self._frames):
             if not self.esta_disponible():
-                raise FuenteError(f"{self._carpeta}: conexion perdida (fuente inaccesible)")
+                # Nunca la ruta absoluta completa: este mensaje puede terminar en una
+                # alerta persistida (ver scripts/escenario_reconexion.py), y una ruta
+                # local (ej. /var/folders/..., /tmp/...) no deberia quedar en evidencia
+                # versionada. source_id identifica la fuente sin filtrar el filesystem
+                # local ni depender de un nombre de carpeta no reproducible.
+                raise FuenteError(
+                    f"fuente '{self._source_id}': conexion perdida (fuente inaccesible)"
+                )
             frame = self._frames[self._siguiente_indice]
             # Se avanza el cursor ANTES de ceder el frame: asi `ultimo_frame_entregado`
             # y `proximo_frame` ya reflejan la realidad apenas el consumidor recibe el

@@ -145,6 +145,11 @@ class ResultadoCorrida:
     almacen_eventos: AlmacenEventos
     almacen_alertas: AlmacenAlertas
     mediciones: tuple[Medicion, ...]
+    #: Un dict por ventana evaluada (timestamp_ms + los campos de ResultadoVentana),
+    #: incluidas las que dieron "evidencia_insuficiente" y nunca generaron alerta --
+    #: para que ese estado sea observable en la evidencia persistida, no solo en
+    #: pruebas unitarias (R3.3).
+    resultados_ventana: tuple[dict, ...]
 
 
 def ejecutar_corrida(
@@ -159,6 +164,7 @@ def ejecutar_corrida(
     source_id: str | None = None,
     config_ref: str | None = None,
     ruta_referencia: str | Path | None = None,
+    tiempo_real: bool = False,
 ) -> ResultadoCorrida:
     """Recorre toda la fuente una vez usando `procesar_frame` por cada frame, y evalua
     la regla de cambio sostenido por ventana. `clasificador` se inyecta siempre
@@ -171,7 +177,13 @@ def ejecutar_corrida(
     `ruta_referencia` (R3.3): si se da, la referencia de `PoliticaConfianza` se carga
     de ese archivo al iniciar (si existe de una corrida anterior) y se guarda ahi al
     terminar -- asi una serie de corridas (ej. C1 -> C2) comparte una referencia real
-    en vez de que cada una fije la suya propia."""
+    en vez de que cada una fije la suya propia.
+
+    `tiempo_real` (R1.1): por defecto la corrida es instantanea (los timestamps son
+    sinteticos, para que sea reproducible sin esperar). Con `tiempo_real=True`, ademas
+    espera `cfg_fuente.frecuencia_ms` de reloj de pared real entre frames -- la
+    frecuencia declarada deja de ser solo una etiqueta y pasa a ser el ritmo real de
+    entrega, a costa de que la corrida tarde literalmente eso en completarse."""
     carpeta_evidencias = Path(carpeta_evidencias)
     config_ref = config_ref or calcular_config_ref(cfg_confianza, cfg_alertas, cfg_modelo)
     fuente = construir_fuente(cfg_fuente, reloj, source_id=source_id)
@@ -190,6 +202,7 @@ def ejecutar_corrida(
     model_ref = clasificador.model_ref
 
     mediciones: list[Medicion] = []
+    resultados_ventana: list[dict] = []
     scores_ventana: list[float] = []
     event_ids_ventana: list[str] = []
     ultimo_timestamp_ms = reloj()
@@ -198,6 +211,9 @@ def ejecutar_corrida(
     for frame in fuente:
         total += 1
         ultimo_timestamp_ms = frame.timestamp_ms
+
+        if tiempo_real:
+            time.sleep(cfg_fuente.frecuencia_ms / 1000)
 
         resultado_frame = procesar_frame(
             frame,
@@ -222,24 +238,28 @@ def ejecutar_corrida(
             scores_ventana.append(evento.prediction.score)
             event_ids_ventana.append(evento.event_id)
             if len(scores_ventana) >= cfg_confianza.tamano_ventana:
-                _evaluar_y_registrar_ventana(
-                    politica,
-                    motor_alertas,
-                    almacen_alertas,
-                    scores_ventana,
-                    event_ids_ventana,
-                    frame.timestamp_ms,
+                resultados_ventana.append(
+                    _evaluar_y_registrar_ventana(
+                        politica,
+                        motor_alertas,
+                        almacen_alertas,
+                        scores_ventana,
+                        event_ids_ventana,
+                        frame.timestamp_ms,
+                    )
                 )
                 scores_ventana, event_ids_ventana = [], []
 
     if scores_ventana:  # cola final: nunca se descarta en silencio, aunque no llene la ventana
-        _evaluar_y_registrar_ventana(
-            politica,
-            motor_alertas,
-            almacen_alertas,
-            scores_ventana,
-            event_ids_ventana,
-            ultimo_timestamp_ms,
+        resultados_ventana.append(
+            _evaluar_y_registrar_ventana(
+                politica,
+                motor_alertas,
+                almacen_alertas,
+                scores_ventana,
+                event_ids_ventana,
+                ultimo_timestamp_ms,
+            )
         )
 
     if ruta_referencia is not None and politica.referencia is not None:
@@ -251,6 +271,7 @@ def ejecutar_corrida(
         almacen_eventos=almacen_eventos,
         almacen_alertas=almacen_alertas,
         mediciones=tuple(mediciones),
+        resultados_ventana=tuple(resultados_ventana),
     )
 
 
@@ -261,8 +282,9 @@ def _evaluar_y_registrar_ventana(
     scores_ventana: list[float],
     event_ids_ventana: list[str],
     timestamp_ms: float,
-) -> None:
+) -> dict:
     resultado = politica.evaluar_ventana(scores_ventana)
     alerta = motor_alertas.evaluar_ventana(resultado, event_ids_ventana, timestamp_ms)
     if alerta is not None:
         almacen_alertas.registrar(alerta)
+    return {"timestamp_ms": timestamp_ms, **asdict(resultado)}

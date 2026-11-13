@@ -66,16 +66,31 @@ pip install -r requirements.txt
 # C1 -- operacion normal
 python3 scripts/ejecutar_corrida.py --stream datos/stream/normal --run-id run-c1-normal
 
-# C2 -- baja confianza
+# C2 -- baja confianza (hereda la referencia de confianza que fijo C1, ver R3.3 abajo)
 python3 scripts/ejecutar_corrida.py --stream datos/stream/baja_confianza --run-id run-c2-baja
+```
+
+Por defecto los timestamps son sinteticos (reproducibles, instantaneos). Con
+`--tiempo-real` la corrida espera de verdad `frecuencia_ms` de reloj de pared
+entre frames (R1.1) -- util para demostrar el ritmo real, a costa de que la
+corrida tarde literalmente eso en completarse:
+
+```bash
+python3 scripts/ejecutar_corrida.py --stream datos/stream/normal --run-id demo-tiempo-real --tiempo-real
 ```
 
 Cada corrida escribe en `evidencias/escenarios/<run-id>/`:
 - `eventos-<run-id>.db` / `alertas-<run-id>.db` (SQLite, regenerables -- no
   versionadas, ver `.gitignore`)
-- `eventos.jsonl` / `alertas.jsonl` (exportados, si versionados -- evidencia
-  persistente)
+- `eventos.jsonl` / `alertas.jsonl` / `ventanas.jsonl` (exportados y
+  versionados -- evidencia persistente, incluye ventanas con
+  `evidencia_insuficiente`, no solo las que dispararon alerta)
 - `imagenes/` (capturas vinculadas a eventos de baja confianza o con alerta)
+
+Y en `evidencias/escenarios/referencia.json` (R3.3): la referencia de
+`PoliticaConfianza` de la ultima corrida, compartida por defecto entre
+corridas sucesivas (`--referencia` para cambiar el archivo o `--referencia ''`
+para no persistir).
 
 Resultado y evidencia de cada escenario ya corrido:
 `evidencias/escenarios/normal/resumen-corrida-c1.md` y
@@ -115,7 +130,7 @@ accion sugerida y enlace a la imagen vinculada) y `/dashboard` (extra F, ver
 | G3 | `uso_recursos_promedio` (RAM/CPU) | `psutil.Process()`, con la primera lectura de CPU descartada |
 | G4 | `proporcion_baja_confianza` | eventos persistidos (misma formula que R3) |
 | G5 | `cobertura_trazabilidad` | campos completos en `AlmacenEventos` |
-| G6 | `version_reportada_vs_esperada` | `model_ref` del evento vs. `config/modelo.yaml` |
+| G6 | `version_reportada_vs_esperada` | `model_ref` del evento (real, de `ClasificadorPreentrenado.model_ref`) vs. lo declarado en `config/modelo.yaml` |
 | G7 | `alertas_activas_en_ventana` | `AlmacenAlertas` |
 
 Definiciones completas (M1) en `src/p6/metricas.py::CATALOGO_BASE`.
@@ -146,17 +161,22 @@ ruff format --check .
 pytest -q
 ```
 
-123 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
+141 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
 cada push/PR a `main`.
 
 ## Limites conocidos
 
-- La `referencia` de `PoliticaConfianza` (linea base para "cambio sostenido") se
-  reinicia en cada corrida -- no persiste entre C1 y C2. La regla
-  `cambio-sostenido-v1` esta configurada y probada por unidad, pero no se
-  demuestra con un tercer escenario: la guia aclara que esa demostracion es un
-  adicional, no un requisito de R3.3. El escenario obligatorio de C2 (alerta de
-  baja confianza por evento individual) no depende de esta referencia y
-  funciona de forma independiente.
+- La `referencia` de `PoliticaConfianza` (linea base para "cambio sostenido")
+  persiste entre corridas via `evidencias/escenarios/referencia.json` (R3.3,
+  `--referencia` en el CLI): C2 hereda la que fijo C1, en vez de fijar la
+  suya propia (ver `evidencias/escenarios/run-c1-normal/ventanas.jsonl` y
+  `run-c2-baja/ventanas.jsonl` -- la razon de la ventana de C2 es
+  `dentro_de_referencia`, no `referencia_fijada`). La regla
+  `cambio-sostenido-v1` esta configurada y probada por unidad, pero con el
+  tamano actual de C1/C2 no alcanzan las ventanas consecutivas necesarias
+  (`ventanas_sostenidas`) para que realmente dispare: la guia aclara que esa
+  demostracion es un adicional, no un requisito de R3.3. El escenario
+  obligatorio de C2 (alerta de baja confianza por evento individual) no
+  depende de esta referencia y funciona de forma independiente.
 - No se evalua calidad predictiva (accuracy, F1, IoU, etc.) -- fuera de alcance
   segun la guia del proyecto.
