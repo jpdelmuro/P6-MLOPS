@@ -32,7 +32,11 @@ def main() -> None:
     parser.add_argument(
         "--frecuencia-ms", type=float, default=None, help="Sobrescribe config/fuente.yaml"
     )
-    parser.add_argument("--evidencias", default=str(RAIZ / "evidencias" / "escenarios"))
+    parser.add_argument(
+        "--evidencias",
+        default="evidencias/escenarios",
+        help="Relativa al directorio actual (se asume cwd = raiz del repo, igual que --stream)",
+    )
     args = parser.parse_args()
 
     cfg_fuente = cargar_fuente(RAIZ / "config" / "fuente.yaml")

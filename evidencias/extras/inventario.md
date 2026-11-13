@@ -43,9 +43,10 @@ R4.3 y R6 ya estan acreditados sin depender de estos extras (ver
     `tests/test_portal.py::test_sin_corridas_las_vistas_no_fallan`,
     `test_dashboard_corrida_sin_eventos_no_falla`,
     `test_dashboard_sin_mediciones_reporta_sin_datos_en_g1_g3`.
-  - Observado con datos reales: `run-c2-baja` renderiza 200 con
-    `tiempo de inferencia p50 = 8.44 ms` y `RAM/CPU = 382.6 MB / 153.7%`,
-    identico al recalculo de `evidencias/metricas/recalculo-metricas.md`.
+  - Observado con datos reales: `GET /dashboard?run_id=run-c2-baja` renderiza
+    200 con G1/G3 identicos, al momento de cada corrida, al recalculo de
+    `evidencias/metricas/recalculo-metricas.md` (son telemetria real: cambian
+    de una corrida a otra, por eso no se fija aqui un valor puntual).
   - No cobra doble por el histograma: M-01 es la aportacion de la metrica
     (calculo, poblacion, exclusiones); F-01 es la aportacion de mostrarla
     integrada a un flujo de consulta parametrizado junto con otras metricas.

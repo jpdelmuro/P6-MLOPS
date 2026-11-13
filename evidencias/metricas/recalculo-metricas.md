@@ -54,10 +54,10 @@ for run in ["run-c1-normal", "run-c2-baja"]:
 
 | Metrica | run-c1-normal | run-c2-baja |
 |---|---:|---:|
-| G1 tiempo_inferencia_p50 (ms) | 17.713 | 8.438 |
+| G1 tiempo_inferencia_p50 (ms) | 18.088 | 8.502 |
 | G2 antiguedad_ultimo_frame (ms, con `ahora = ultimo_frame + 1000`) | 1000.0 | 1000.0 |
-| G3 RAM promedio (MB) | 385.46 | 382.63 |
-| G3 CPU promedio (%) | 119.63 | 153.72 |
+| G3 RAM promedio (MB) | 385.46 | 382.62 |
+| G3 CPU promedio (%) | 119.06 | 155.42 |
 | G3 muestras | 9 | 10 |
 | G4 proporcion_baja_confianza | 0.333 (3/9) | 0.400 (4/10) |
 | G5 cobertura_trazabilidad | 1.0 | 1.0 |
