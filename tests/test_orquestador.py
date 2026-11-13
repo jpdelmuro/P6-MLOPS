@@ -33,17 +33,22 @@ CFG_ALERTAS = ConfigAlertas(
 
 class ClasificadorFalso:
     """Doble de prueba: devuelve scores predeterminados en orden, sin cargar pesos
-    reales -- la misma interfaz (`clasificar(ruta) -> Prediccion`) que
-    `ClasificadorPreentrenado`."""
+    reales -- la misma interfaz dividida (`cargar_y_preprocesar`/`inferir`) que
+    `ClasificadorPreentrenado`. El fallo simulado ocurre en `cargar_y_preprocesar`,
+    igual que un fallo real de lectura de imagen."""
 
     def __init__(self, scores: list[float | None]) -> None:
         self._scores = iter(scores)
+        self._siguiente_score: float | None = None
 
-    def clasificar(self, ruta_imagen):
-        score = next(self._scores)
-        if score is None:
+    def cargar_y_preprocesar(self, ruta_imagen):
+        self._siguiente_score = next(self._scores)
+        if self._siguiente_score is None:
             raise ModeloError(f"{ruta_imagen}: fallo simulado")
-        return Prediccion(class_id=0, class_name="fake", score=score)
+        return ruta_imagen  # "tensor" falso: basta con pasarlo a inferir
+
+    def inferir(self, entrada):
+        return Prediccion(class_id=0, class_name="fake", score=self._siguiente_score)
 
 
 def _crear_imagenes(carpeta, cantidad):
@@ -195,6 +200,104 @@ def test_imagenes_vinculadas_se_capturan_siempre_en_baja_confianza(tmp_path):
     assert Path(evento["image_ref"]).exists()
     resultado.almacen_eventos.cerrar()
     resultado.almacen_alertas.cerrar()
+
+
+def test_config_ref_se_calcula_de_la_configuracion_real_si_no_se_da(tmp_path):
+    carpeta = _crear_imagenes(tmp_path / "stream", 1)
+    cfg_fuente = ConfigFuente(carpeta=str(carpeta), frecuencia_ms=100.0)
+
+    resultado = ejecutar_corrida(
+        run_id="run-cref",
+        cfg_fuente=cfg_fuente,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias",
+        clasificador=ClasificadorFalso([0.95]),
+    )
+    evento = resultado.almacen_eventos.listar(run_id="run-cref")[0]
+    assert evento["config_ref"] != "config-v1"
+    assert evento["config_ref"].startswith("config-")
+    resultado.almacen_eventos.cerrar()
+    resultado.almacen_alertas.cerrar()
+
+
+def test_config_ref_cambia_si_cambia_la_configuracion(tmp_path):
+    from dataclasses import replace
+
+    carpeta = _crear_imagenes(tmp_path / "stream", 1)
+    cfg_fuente = ConfigFuente(carpeta=str(carpeta), frecuencia_ms=100.0)
+    otra_confianza = replace(CFG_CONFIANZA, umbral_inferior=0.1)
+
+    r1 = ejecutar_corrida(
+        run_id="run-a",
+        cfg_fuente=cfg_fuente,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias-a",
+        clasificador=ClasificadorFalso([0.95]),
+    )
+    r2 = ejecutar_corrida(
+        run_id="run-b",
+        cfg_fuente=cfg_fuente,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=otra_confianza,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias-b",
+        clasificador=ClasificadorFalso([0.95]),
+    )
+    ref_a = r1.almacen_eventos.listar(run_id="run-a")[0]["config_ref"]
+    ref_b = r2.almacen_eventos.listar(run_id="run-b")[0]["config_ref"]
+    assert ref_a != ref_b
+    for r in (r1, r2):
+        r.almacen_eventos.cerrar()
+        r.almacen_alertas.cerrar()
+
+
+def test_referencia_persiste_entre_corridas_via_ruta_referencia(tmp_path):
+    # C1: 5 scores altos (tamano_ventana=3, 1 ventana completa + cola insuficiente)
+    # -> referencia = 0.0. C2: 2 ventanas completas, ambas con tasa=2/3 > 0.0+0.20.
+    # Si C2 heredara la referencia de C1 (0.0), ambas ventanas cuentan "por encima" y
+    # la 2a (ventanas_sostenidas=2) dispara cambio-sostenido-v1. Si C2 fijara su PROPIA
+    # referencia (bug corregido), la 1a ventana solo la fijaria y nunca dispararia.
+    carpeta_c1 = _crear_imagenes(tmp_path / "c1", 5)
+    carpeta_c2 = _crear_imagenes(tmp_path / "c2", 6)
+    cfg_fuente_c1 = ConfigFuente(carpeta=str(carpeta_c1), frecuencia_ms=100.0)
+    cfg_fuente_c2 = ConfigFuente(carpeta=str(carpeta_c2), frecuencia_ms=100.0)
+    ruta_referencia = tmp_path / "referencia.json"
+
+    ejecutar_corrida(
+        run_id="c1",
+        cfg_fuente=cfg_fuente_c1,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias-c1",
+        clasificador=ClasificadorFalso([0.95, 0.95, 0.95, 0.95, 0.95]),
+        ruta_referencia=ruta_referencia,
+    )
+    assert ruta_referencia.exists()
+
+    resultado_c2 = ejecutar_corrida(
+        run_id="c2",
+        cfg_fuente=cfg_fuente_c2,
+        cfg_modelo=CFG_MODELO,
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias-c2",
+        clasificador=ClasificadorFalso([0.5, 0.5, 0.9] * 2),  # 2 ventanas, tasa=2/3 c/u
+        ruta_referencia=ruta_referencia,
+    )
+    alertas_sostenido = resultado_c2.almacen_alertas.listar(rule_id="cambio-sostenido-v1")
+    assert len(alertas_sostenido) == 1  # solo se dispara si C2 hereda la referencia 0.0 de C1
+    resultado_c2.almacen_eventos.cerrar()
+    resultado_c2.almacen_alertas.cerrar()
 
 
 def test_corrida_real_con_clasificador_preentrenado(tmp_path):

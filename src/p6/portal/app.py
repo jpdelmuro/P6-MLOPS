@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 from collections import Counter
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -21,6 +22,7 @@ from p6.alertas import AlmacenAlertas
 from p6.eventos import AlmacenEventos
 from p6.metricas import (
     Medicion,
+    antiguedad_ultimo_frame,
     distribucion_confianza,
     tiempo_inferencia_p50,
     uso_recursos_promedio,
@@ -40,10 +42,15 @@ def _base_evidencias() -> Path:
 
 
 def listar_corridas() -> list[str]:
+    """Solo carpetas que son corridas de verdad (tienen `eventos-<run_id>.db`) -- la
+    carpeta de evidencias tambien contiene subcarpetas de documentacion
+    (`normal/`, `baja-confianza/`) que no lo son y antes aparecian vacias aqui."""
     base = _base_evidencias()
     if not base.is_dir():
         return []
-    return sorted(p.name for p in base.iterdir() if p.is_dir())
+    return sorted(
+        p.name for p in base.iterdir() if p.is_dir() and (p / f"eventos-{p.name}.db").exists()
+    )
 
 
 def _rutas_db(run_id: str) -> tuple[Path, Path]:
@@ -130,6 +137,18 @@ def _cargar_mediciones(run_id: str) -> list[Medicion]:
         return [Medicion(**json.loads(linea)) for linea in archivo if linea.strip()]
 
 
+def _g2_antiguedad_ms(eventos: list[dict]) -> float | None:
+    """G2 con tiempo real, no el timestamp sintetico del stream (R4.1/G2): usa
+    `fecha_utc` (hora de pared real en que se proceso cada evento) contra el reloj de
+    pared actual -- una "antiguedad" genuina, no un valor fijo por construccion."""
+    fechas = [e["fecha_utc"] for e in eventos if e.get("fecha_utc")]
+    if not fechas:
+        return None
+    timestamps_epoch_ms = [datetime.fromisoformat(f).timestamp() * 1000 for f in fechas]
+    ahora_ms = datetime.now(UTC).timestamp() * 1000
+    return antiguedad_ultimo_frame(timestamps_epoch_ms, ahora_ms)
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
     """Extra F: vista agregada de una corrida -- conteo por zona, tiempo de inferencia
@@ -170,6 +189,7 @@ def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
     mediciones = _cargar_mediciones(run_id)
     g1_p50 = tiempo_inferencia_p50(mediciones) if mediciones else None
     g3_uso = uso_recursos_promedio(mediciones) if mediciones else None
+    g2_antiguedad = _g2_antiguedad_ms(eventos)
 
     contexto.update(
         {
@@ -178,6 +198,7 @@ def ver_dashboard(request: Request, run_id: str | None = None) -> HTMLResponse:
             "conteo_zonas": dict(conteo_zonas),
             "histograma": histograma,
             "g1_p50": g1_p50,
+            "g2_antiguedad": g2_antiguedad,
             "g3_uso": g3_uso,
             "total_alertas": len(alertas),
             "conteo_alertas": dict(conteo_alertas),

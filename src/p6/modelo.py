@@ -42,16 +42,28 @@ class ClasificadorPreentrenado:
     def clases(self) -> tuple[str, ...]:
         return self._clases
 
-    def clasificar(self, ruta_imagen: str | Path) -> Prediccion:
+    def cargar_y_preprocesar(self, ruta_imagen: str | Path) -> torch.Tensor:
+        """Lectura/decodificacion + preprocesamiento -- deliberadamente separado de
+        `inferir` para que quien mida tiempos (ver `p6.orquestador`) pueda cronometrar
+        solo la inferencia del modelo, tal como declara G1 en `p6.metricas`."""
         try:
             imagen = Image.open(ruta_imagen).convert("RGB")
         except (OSError, UnidentifiedImageError) as exc:
             raise ModeloError(f"{ruta_imagen}: no se pudo leer la imagen ({exc})") from exc
+        return self._transformar(imagen).unsqueeze(0)
 
-        entrada = self._transformar(imagen).unsqueeze(0)
+    def inferir(self, entrada: torch.Tensor) -> Prediccion:
+        """Solo el paso del modelo (forward + softmax + argmax) sobre un tensor ya
+        preprocesado -- esto es lo que G1 (tiempo de inferencia) debe cronometrar."""
         with torch.inference_mode():
             logits = self._modelo(entrada)
             probabilidades = torch.nn.functional.softmax(logits, dim=1)[0]
         class_id = int(torch.argmax(probabilidades))
         score = float(probabilidades[class_id])
         return Prediccion(class_id=class_id, class_name=self._clases[class_id], score=score)
+
+    def clasificar(self, ruta_imagen: str | Path) -> Prediccion:
+        """Conveniencia: carga + preprocesa + infiere en un solo paso. Quien necesite
+        medir solo la inferencia (orquestador, metricas G1) debe llamar
+        `cargar_y_preprocesar` e `inferir` por separado en vez de este metodo."""
+        return self.inferir(self.cargar_y_preprocesar(ruta_imagen))

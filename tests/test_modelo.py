@@ -43,3 +43,20 @@ def test_imagen_corrupta_lanza_modelo_error(clasificador, tmp_path):
 def test_imagen_inexistente_lanza_modelo_error(clasificador, tmp_path):
     with pytest.raises(ModeloError):
         clasificador.clasificar(tmp_path / "no-existe.jpg")
+
+
+def test_cargar_y_preprocesar_mas_inferir_da_lo_mismo_que_clasificar(
+    clasificador, imagen_de_prueba
+):
+    # G1 (R2) cronometra solo `inferir`: deben componer exactamente igual que `clasificar`.
+    entrada = clasificador.cargar_y_preprocesar(imagen_de_prueba)
+    prediccion_separada = clasificador.inferir(entrada)
+    prediccion_directa = clasificador.clasificar(imagen_de_prueba)
+    assert prediccion_separada == prediccion_directa
+
+
+def test_cargar_y_preprocesar_imagen_corrupta_lanza_modelo_error(clasificador, tmp_path):
+    ruta = tmp_path / "corrupta.jpg"
+    ruta.write_bytes(b"esto no es una imagen valida")
+    with pytest.raises(ModeloError):
+        clasificador.cargar_y_preprocesar(ruta)

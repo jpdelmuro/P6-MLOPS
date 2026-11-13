@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ CAMPOS_EVENTO_OBLIGATORIOS = (
     "run_id",
     "frame_id",
     "timestamp_ms",
+    "fecha_utc",
     "source_id",
     "task",
     "model_ref",
@@ -28,12 +30,16 @@ CAMPOS_EVENTO_OBLIGATORIOS = (
 )
 
 
+def _ahora_utc_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
 @dataclass(frozen=True)
 class Evento:
     event_id: str
     run_id: str
     frame_id: str
-    timestamp_ms: float
+    timestamp_ms: float  # posicion sintetica en el stream (R1.1), no un reloj de pared
     source_id: str
     task: str
     model_ref: str
@@ -42,6 +48,9 @@ class Evento:
     confidence_zone: str  # "aceptada" | "duda" | "baja_confianza" | "sin_puntuacion"
     config_ref: str
     image_ref: str | None = None
+    #: Fecha/hora real (UTC, ISO-8601) en que se proceso el frame -- R4.1 pide "fecha",
+    #: que `timestamp_ms` (sintetico, relativo al origen de la corrida) no provee.
+    fecha_utc: str = field(default_factory=_ahora_utc_iso)
 
     def a_dict(self) -> dict[str, Any]:
         return asdict(self)

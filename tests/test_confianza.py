@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from p6.confianza import PoliticaConfianza, tasa_baja_confianza, zona_de
+from p6.confianza import (
+    PoliticaConfianza,
+    cargar_referencia,
+    guardar_referencia,
+    tasa_baja_confianza,
+    zona_de,
+)
 from p6.config import ConfigConfianza
 
 CFG = ConfigConfianza(
@@ -105,3 +111,28 @@ def test_ventana_insuficiente_tambien_reinicia_el_conteo_sostenido():
     r1 = politica.evaluar_ventana(ventana_alta)
     r2 = politica.evaluar_ventana(ventana_alta)
     assert r1.cambio_sostenido is False and r2.cambio_sostenido is False
+
+
+# --- Persistencia de la referencia entre corridas (R3.3) -----------------------
+
+
+def test_cargar_referencia_sin_archivo_es_none(tmp_path):
+    assert cargar_referencia(tmp_path / "no-existe.json") is None
+
+
+def test_guardar_y_cargar_referencia_hace_ida_y_vuelta(tmp_path):
+    ruta = tmp_path / "referencia.json"
+    guardar_referencia(ruta, 0.125)
+    assert cargar_referencia(ruta) == 0.125
+
+
+def test_referencia_inicial_se_usa_en_vez_de_la_primera_ventana():
+    # Sin referencia_inicial, la primera ventana FIJA la referencia (no se compara).
+    # Con referencia_inicial, la primera ventana ya se compara contra ella.
+    politica = PoliticaConfianza(CFG, referencia_inicial=0.0)
+    assert politica.referencia == 0.0
+
+    ventana_alta = [0.5, 0.5, 0.9, 0.9, 0.9]  # tasa=0.4 > 0.0 + margen(0.20)
+    r = politica.evaluar_ventana(ventana_alta)
+    assert r.razon != "referencia_fijada"  # no se re-fija: ya venia de otra corrida
+    assert r.tasa_baja_confianza == pytest.approx(0.4)

@@ -111,6 +111,7 @@ def _evento_dict(status="ok", prediction=_SIN_PROVEER, zona="aceptada", **overri
         "run_id": "run-1",
         "frame_id": "f0",
         "timestamp_ms": 1000.0,
+        "fecha_utc": "2026-01-01T00:00:00+00:00",
         "source_id": "normal",
         "task": "classification",
         "model_ref": "torchvision.models.resnet18",

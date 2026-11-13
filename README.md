@@ -110,9 +110,9 @@ accion sugerida y enlace a la imagen vinculada) y `/dashboard` (extra F, ver
 
 | Grupo | Metrica base | Fuente de datos |
 |---|---|---|
-| G1 | `tiempo_inferencia_p50` | `time.perf_counter` alrededor de `modelo.clasificar` |
-| G2 | `antiguedad_ultimo_frame` | timestamps de `p6.fuente` |
-| G3 | `uso_recursos_promedio` (RAM/CPU) | `psutil.Process()` |
+| G1 | `tiempo_inferencia_p50` | `time.perf_counter` alrededor de `ClasificadorPreentrenado.inferir` (no de la lectura/preprocesamiento) |
+| G2 | `antiguedad_ultimo_frame` | `fecha_utc` real de los eventos (no el timestamp sintetico del stream) |
+| G3 | `uso_recursos_promedio` (RAM/CPU) | `psutil.Process()`, con la primera lectura de CPU descartada |
 | G4 | `proporcion_baja_confianza` | eventos persistidos (misma formula que R3) |
 | G5 | `cobertura_trazabilidad` | campos completos en `AlmacenEventos` |
 | G6 | `version_reportada_vs_esperada` | `model_ref` del evento vs. `config/modelo.yaml` |

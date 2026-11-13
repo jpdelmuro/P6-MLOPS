@@ -196,3 +196,52 @@ def test_dashboard_sin_mediciones_reporta_sin_datos_en_g1_g3(tmp_path, monkeypat
     import shutil
 
     shutil.rmtree(carpeta_imagenes)
+
+
+def test_dashboard_calcula_g2_con_fecha_utc_real(tmp_path, monkeypatch):
+    import re
+
+    carpeta_imagenes, _ = _preparar_corrida(tmp_path, monkeypatch)
+    cliente = TestClient(app)
+    respuesta = cliente.get("/dashboard", params={"run_id": "run-1"})
+    assert respuesta.status_code == 200
+    # Los eventos de _preparar_corrida se registran "ahora" (fecha_utc por defecto):
+    # la antiguedad real debe ser un numero (ms), no la ausencia "sin datos".
+    bloque = re.search(
+        r"G2 - antiguedad del ultimo frame</h3>\s*<div class=\"valor\">\s*(.*?)\s*</div>",
+        respuesta.text,
+        re.DOTALL,
+    )
+    assert bloque is not None
+    assert "ms" in bloque.group(1)
+    assert "sin datos" not in bloque.group(1)
+
+    import shutil
+
+    shutil.rmtree(carpeta_imagenes)
+
+
+def test_listar_corridas_excluye_carpetas_sin_eventos_db(tmp_path, monkeypatch):
+    base = tmp_path / "escenarios"
+    (base / "normal").mkdir(parents=True)  # carpeta de documentacion, no una corrida
+    (base / "normal" / "resumen-corrida-c1.md").write_text("x")
+    monkeypatch.setenv("P6_EVIDENCIAS_DIR", str(base))
+
+    from p6.portal.app import listar_corridas
+
+    assert listar_corridas() == []
+
+
+def test_inicio_no_lista_carpetas_de_documentacion(tmp_path, monkeypatch):
+    carpeta_imagenes, _ = _preparar_corrida(tmp_path, monkeypatch)
+    base = tmp_path / "escenarios"
+    (base / "normal").mkdir(parents=True, exist_ok=True)  # no es una corrida real
+
+    cliente = TestClient(app)
+    respuesta = cliente.get("/")
+    assert "run-1" in respuesta.text
+    assert ">normal<" not in respuesta.text
+
+    import shutil
+
+    shutil.rmtree(carpeta_imagenes)

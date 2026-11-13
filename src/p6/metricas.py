@@ -32,8 +32,10 @@ CATALOGO_BASE: tuple[MetricaBase, ...] = (
         "G1",
         "tiempo_inferencia_p50",
         "Percentil 50 (mediana) del tiempo de inferencia del modelo por ventana, medido "
-        "con time.perf_counter alrededor de modelo.clasificar; excluye lectura/decodificacion "
-        "de la imagen. Poblacion: una muestra por frame procesado en la ventana.",
+        "con time.perf_counter alrededor de ClasificadorPreentrenado.inferir (nunca de "
+        "cargar_y_preprocesar, que hace la lectura/decodificacion y el preprocesamiento "
+        "por separado). Poblacion: un frame con inferencia exitosa en la ventana; los "
+        "frames con fallo de lectura no producen medicion (no hubo inferencia).",
         "milisegundos",
     ),
     MetricaBase(
@@ -47,8 +49,12 @@ CATALOGO_BASE: tuple[MetricaBase, ...] = (
         "G3",
         "uso_recursos_promedio",
         "Promedio de RAM (MB) y CPU (%) del proceso durante la ventana, muestreado con "
-        "psutil.Process() en cada frame procesado.",
-        "MB y % de CPU",
+        "psutil.Process().cpu_percent(interval=None) en cada frame con inferencia exitosa "
+        "(la primera lectura de cpu_percent se descarta antes del primer frame -- ver "
+        "p6.orquestador.iniciar_medicion_recursos -- porque psutil la devuelve en 0.0 sin "
+        "significado). El % de CPU puede superar 100 si el proceso usa mas de un nucleo; "
+        "no es un error.",
+        "MB y % de CPU (puede superar 100% con multiples nucleos)",
     ),
     MetricaBase(
         "G4",

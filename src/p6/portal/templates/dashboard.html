@@ -46,6 +46,12 @@
     </div>
   </div>
   <div class="tarjeta">
+    <h3>G2 - antiguedad del ultimo frame</h3>
+    <div class="valor">
+      {% if g2_antiguedad is not none %}{{ "%.0f"|format(g2_antiguedad) }} ms{% else %}sin datos{% endif %}
+    </div>
+  </div>
+  <div class="tarjeta">
     <h3>G3 - RAM / CPU promedio</h3>
     <div class="valor">
       {% if g3_uso is not none %}{{ "%.1f"|format(g3_uso.ram_mb_promedio) }} MB / {{ "%.1f"|format(g3_uso.cpu_percent_promedio) }}%{% else %}sin datos{% endif %}

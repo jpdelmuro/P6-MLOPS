@@ -2,30 +2,138 @@
 alertas en una sola corrida, con un unico reloj compartido (mismo principio que el
 `Watchdog` del Proyecto 5: un solo origen de tiempo por corrida, nunca dos relojes
 independientes).
+
+`procesar_frame` concentra la logica por-frame (clasificar, zona, captura, evento,
+alerta por evento) para que `ejecutar_corrida` y cualquier corrida que envuelva su
+propia fuente (ver `scripts/escenario_reconexion.py`, extra S) usen exactamente el
+mismo camino -- un escenario adicional nunca debe saltarse la alerta o la captura que
+el resto del sistema sí aplica.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Protocol
 
 import psutil
 
-from p6.alertas import AlmacenAlertas, MotorAlertas
+from p6.alertas import Alerta, AlmacenAlertas, MotorAlertas
 from p6.capturas import PoliticaCapturas
-from p6.confianza import PoliticaConfianza, zona_de
+from p6.confianza import PoliticaConfianza, cargar_referencia, guardar_referencia, zona_de
 from p6.config import ConfigAlertas, ConfigConfianza, ConfigFuente, ConfigModelo
 from p6.eventos import AlmacenEventos, Evento
-from p6.fuente import construir_fuente
+from p6.fuente import Frame, construir_fuente
 from p6.metricas import Medicion
 from p6.modelo import ModeloError, Prediccion
 from p6.reloj import Reloj
 
 
 class Clasificador(Protocol):
-    def clasificar(self, ruta_imagen: Path) -> Prediccion: ...
+    def cargar_y_preprocesar(self, ruta_imagen: Path): ...  # devuelve un tensor de torch
+    def inferir(self, entrada) -> Prediccion: ...
+
+
+def calcular_config_ref(
+    cfg_confianza: ConfigConfianza, cfg_alertas: ConfigAlertas, cfg_modelo: ConfigModelo
+) -> str:
+    """Huella de la configuracion real usada por la corrida (R4.1 pide "la
+    configuracion usada", no un texto fijo que no refleje umbrales ni ventana).
+    Cambia si cambia cualquier umbral, ventana o regla -- identidad resoluble, no
+    decorativa."""
+    payload = json.dumps(
+        {
+            "confianza": asdict(cfg_confianza),
+            "alertas": asdict(cfg_alertas),
+            "modelo": asdict(cfg_modelo),
+        },
+        sort_keys=True,
+    )
+    return "config-" + hashlib.sha256(payload.encode()).hexdigest()[:10]
+
+
+def iniciar_medicion_recursos() -> psutil.Process:
+    """`Process.cpu_percent(interval=None)` devuelve 0.0, sin significado, en su
+    primera llamada (no hay intervalo previo que medir) -- esa primera lectura se
+    descarta aqui, antes de procesar ningun frame, para que G3 no promedie un 0.0
+    artificial. Llamadas posteriores sí miden el intervalo real transcurrido."""
+    proceso = psutil.Process()
+    proceso.cpu_percent(interval=None)
+    return proceso
+
+
+@dataclass(frozen=True)
+class ResultadoFrame:
+    evento: Evento
+    medicion: Medicion | None  # None si la imagen no se pudo leer: no hubo inferencia
+    alerta: Alerta | None
+
+
+def procesar_frame(
+    frame: Frame,
+    *,
+    run_id: str,
+    source_id: str,
+    model_ref: str,
+    config_ref: str,
+    clasificador: Clasificador,
+    cfg_confianza: ConfigConfianza,
+    motor_alertas: MotorAlertas,
+    capturas: PoliticaCapturas,
+    proceso: psutil.Process,
+) -> ResultadoFrame:
+    """Un frame -> un evento + (si hubo inferencia) una medicion + (si corresponde)
+    una alerta por evento. El tiempo medido para G1 es solo `clasificador.inferir`
+    (nunca la lectura/decodificacion de la imagen, que `cargar_y_preprocesar` hace por
+    separado)."""
+    event_id = f"evt-{run_id}-{frame.frame_id}"
+
+    try:
+        entrada = clasificador.cargar_y_preprocesar(frame.ruta)
+        status = "ok"
+    except ModeloError:
+        entrada = None
+        status = "error"
+
+    prediccion: Prediccion | None = None
+    medicion: Medicion | None = None
+    if status == "ok":
+        inicio = time.perf_counter()
+        prediccion = clasificador.inferir(entrada)
+        duracion_inferencia_ms = (time.perf_counter() - inicio) * 1000
+        medicion = Medicion(
+            frame_id=frame.frame_id,
+            timestamp_ms=frame.timestamp_ms,
+            duracion_inferencia_ms=duracion_inferencia_ms,
+            cpu_percent=proceso.cpu_percent(interval=None),
+            ram_mb=proceso.memory_info().rss / (1024 * 1024),
+        )
+
+    score = prediccion.score if prediccion is not None else None
+    zona = zona_de(score, cfg_confianza) if status == "ok" else "sin_puntuacion"
+
+    alerta_evento = motor_alertas.evaluar_evento(event_id, zona, frame.timestamp_ms)
+    captura, _razon = capturas.debe_capturar(zona, alerta_disparada=alerta_evento is not None)
+    image_ref = capturas.capturar(event_id, frame.ruta) if captura else None
+
+    evento = Evento(
+        event_id=event_id,
+        run_id=run_id,
+        frame_id=frame.frame_id,
+        timestamp_ms=frame.timestamp_ms,
+        source_id=source_id,
+        task="classification",
+        model_ref=model_ref,
+        status=status,
+        prediction=prediccion,
+        confidence_zone=zona,
+        config_ref=config_ref,
+        image_ref=image_ref,
+    )
+    return ResultadoFrame(evento=evento, medicion=medicion, alerta=alerta_evento)
 
 
 @dataclass(frozen=True)
@@ -47,23 +155,33 @@ def ejecutar_corrida(
     carpeta_evidencias: str | Path,
     clasificador: Clasificador,
     source_id: str | None = None,
-    config_ref: str = "config-v1",
+    config_ref: str | None = None,
+    ruta_referencia: str | Path | None = None,
 ) -> ResultadoCorrida:
-    """Recorre toda la fuente una vez: por cada frame, clasifica, ubica la zona de
-    confianza, decide la captura, registra el evento y evalua alertas (por evento y por
-    ventana). `clasificador` se inyecta siempre explicitamente -- nunca se construye
-    aqui un modelo por defecto, para que una corrida de prueba pueda usar un doble sin
-    cargar los pesos reales."""
+    """Recorre toda la fuente una vez usando `procesar_frame` por cada frame, y evalua
+    la regla de cambio sostenido por ventana. `clasificador` se inyecta siempre
+    explicitamente -- nunca se construye aqui un modelo por defecto, para que una
+    corrida de prueba pueda usar un doble sin cargar los pesos reales.
+
+    `config_ref`: si se omite, se calcula de `cfg_confianza`/`cfg_alertas`/`cfg_modelo`
+    reales (ver `calcular_config_ref`) en vez de usar un texto fijo.
+
+    `ruta_referencia` (R3.3): si se da, la referencia de `PoliticaConfianza` se carga
+    de ese archivo al iniciar (si existe de una corrida anterior) y se guarda ahi al
+    terminar -- asi una serie de corridas (ej. C1 -> C2) comparte una referencia real
+    en vez de que cada una fije la suya propia."""
     carpeta_evidencias = Path(carpeta_evidencias)
+    config_ref = config_ref or calcular_config_ref(cfg_confianza, cfg_alertas, cfg_modelo)
     fuente = construir_fuente(cfg_fuente, reloj, source_id=source_id)
-    politica = PoliticaConfianza(cfg_confianza)
+    referencia_inicial = cargar_referencia(ruta_referencia) if ruta_referencia else None
+    politica = PoliticaConfianza(cfg_confianza, referencia_inicial=referencia_inicial)
     motor_alertas = MotorAlertas(cfg_alertas, config_ref=config_ref)
 
     almacen_eventos = AlmacenEventos(carpeta_evidencias / f"eventos-{run_id}.db")
     almacen_alertas = AlmacenAlertas(carpeta_evidencias / f"alertas-{run_id}.db")
     capturas = PoliticaCapturas(carpeta_evidencias / "imagenes")
 
-    proceso = psutil.Process()
+    proceso = iniciar_medicion_recursos()
     model_ref = f"{cfg_modelo.modelo_ref}@{cfg_modelo.pesos}"
 
     mediciones: list[Medicion] = []
@@ -74,57 +192,30 @@ def ejecutar_corrida(
 
     for frame in fuente:
         total += 1
-        event_id = f"evt-{run_id}-{frame.frame_id}"
         ultimo_timestamp_ms = frame.timestamp_ms
 
-        inicio = time.perf_counter()
-        try:
-            prediccion: Prediccion | None = clasificador.clasificar(frame.ruta)
-            status = "ok"
-        except ModeloError:
-            prediccion = None
-            status = "error"
-        duracion_ms = (time.perf_counter() - inicio) * 1000
-
-        mediciones.append(
-            Medicion(
-                frame_id=frame.frame_id,
-                timestamp_ms=frame.timestamp_ms,
-                duracion_inferencia_ms=duracion_ms,
-                cpu_percent=proceso.cpu_percent(interval=None),
-                ram_mb=proceso.memory_info().rss / (1024 * 1024),
-            )
+        resultado_frame = procesar_frame(
+            frame,
+            run_id=run_id,
+            source_id=fuente.source_id,
+            model_ref=model_ref,
+            config_ref=config_ref,
+            clasificador=clasificador,
+            cfg_confianza=cfg_confianza,
+            motor_alertas=motor_alertas,
+            capturas=capturas,
+            proceso=proceso,
         )
+        almacen_eventos.registrar(resultado_frame.evento)
+        if resultado_frame.medicion is not None:
+            mediciones.append(resultado_frame.medicion)
+        if resultado_frame.alerta is not None:
+            almacen_alertas.registrar(resultado_frame.alerta)
 
-        score = prediccion.score if prediccion is not None else None
-        zona = zona_de(score, cfg_confianza) if status == "ok" else "sin_puntuacion"
-
-        alerta_evento = motor_alertas.evaluar_evento(event_id, zona, frame.timestamp_ms)
-        captura, _razon = capturas.debe_capturar(zona, alerta_disparada=alerta_evento is not None)
-        image_ref = capturas.capturar(event_id, frame.ruta) if captura else None
-
-        almacen_eventos.registrar(
-            Evento(
-                event_id=event_id,
-                run_id=run_id,
-                frame_id=frame.frame_id,
-                timestamp_ms=frame.timestamp_ms,
-                source_id=fuente.source_id,
-                task="classification",
-                model_ref=model_ref,
-                status=status,
-                prediction=prediccion,
-                confidence_zone=zona,
-                config_ref=config_ref,
-                image_ref=image_ref,
-            )
-        )
-        if alerta_evento is not None:
-            almacen_alertas.registrar(alerta_evento)
-
-        if status == "ok" and score is not None:
-            scores_ventana.append(score)
-            event_ids_ventana.append(event_id)
+        evento = resultado_frame.evento
+        if evento.status == "ok" and evento.prediction is not None:
+            scores_ventana.append(evento.prediction.score)
+            event_ids_ventana.append(evento.event_id)
             if len(scores_ventana) >= cfg_confianza.tamano_ventana:
                 _evaluar_y_registrar_ventana(
                     politica,
@@ -145,6 +236,9 @@ def ejecutar_corrida(
             event_ids_ventana,
             ultimo_timestamp_ms,
         )
+
+    if ruta_referencia is not None and politica.referencia is not None:
+        guardar_referencia(ruta_referencia, politica.referencia)
 
     return ResultadoCorrida(
         run_id=run_id,

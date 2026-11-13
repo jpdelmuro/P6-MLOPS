@@ -9,8 +9,10 @@ evento/alerta final (ver `p6.eventos`/`p6.alertas`) agrega identidad y tiempos.
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from p6.config import ConfigConfianza
@@ -51,15 +53,34 @@ def tasa_baja_confianza(scores: list[float], cfg: ConfigConfianza) -> float | No
     return bajos / len(scores)
 
 
-class PoliticaConfianza:
-    """Mantiene la referencia (tasa de baja confianza de la primera ventana valida) y
-    cuenta ventanas consecutivas por encima de `referencia + margen_cambio_sostenido`
-    para decidir un cambio sostenido -- misma histeresis por conteo que
-    `p5.politica.cuadros_liberar`, aplicada aqui a ventanas en vez de cuadros."""
+def cargar_referencia(ruta: str | Path) -> float | None:
+    """R3.3: "conserva una referencia" -- la referencia de `PoliticaConfianza` vive
+    solo en memoria durante una corrida; esto le da continuidad real entre corridas
+    (ej. C1 establece la referencia, C2 la hereda en vez de fijar la suya propia).
+    Devuelve None si el archivo no existe todavia (primera corrida de la serie)."""
+    ruta = Path(ruta)
+    if not ruta.exists():
+        return None
+    datos = json.loads(ruta.read_text())
+    return datos["referencia"]
 
-    def __init__(self, cfg: ConfigConfianza) -> None:
+
+def guardar_referencia(ruta: str | Path, referencia: float) -> None:
+    ruta = Path(ruta)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text(json.dumps({"referencia": referencia}))
+
+
+class PoliticaConfianza:
+    """Mantiene la referencia (tasa de baja confianza de la primera ventana valida, o
+    la heredada de una corrida anterior via `referencia_inicial`) y cuenta ventanas
+    consecutivas por encima de `referencia + margen_cambio_sostenido` para decidir un
+    cambio sostenido -- misma histeresis por conteo que `p5.politica.cuadros_liberar`,
+    aplicada aqui a ventanas en vez de cuadros."""
+
+    def __init__(self, cfg: ConfigConfianza, referencia_inicial: float | None = None) -> None:
         self.cfg = cfg
-        self._referencia: float | None = None
+        self._referencia: float | None = referencia_inicial
         self._ventanas_por_encima = 0
 
     @property
