@@ -81,3 +81,23 @@ def test_timestamps_de_los_frames_restantes_no_cambian_tras_reconectar(tmp_path)
 
     restantes = list(fuente)
     assert [f.timestamp_ms for f in restantes] == [1500.0, 2000.0]
+
+
+def test_proximo_frame_y_ultimo_frame_entregado(tmp_path):
+    carpeta = tmp_path / "stream"
+    carpeta.mkdir()
+    _crear_imagenes(carpeta, ["a.jpg", "b.jpg", "c.jpg"])
+    fuente = FuenteConReconexion(carpeta, 500.0, RelojControlado(0.0), source_id="s")
+
+    assert fuente.ultimo_frame_entregado is None  # nada entregado todavia
+    assert fuente.proximo_frame.frame_id == "s_0000"
+
+    iterador = iter(fuente)
+    next(iterador)
+    assert fuente.ultimo_frame_entregado.frame_id == "s_0000"
+    assert fuente.proximo_frame.frame_id == "s_0001"
+
+    next(iterador)
+    next(iterador)
+    assert fuente.ultimo_frame_entregado.frame_id == "s_0002"
+    assert fuente.proximo_frame is None  # ya se agoto

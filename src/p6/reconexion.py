@@ -47,6 +47,26 @@ class FuenteConReconexion:
         interrupcion en la evidencia del escenario."""
         return self._siguiente_indice
 
+    @property
+    def proximo_frame(self) -> Frame | None:
+        """El frame que se entregaria a continuacion (sin consumirlo), o None si ya se
+        agotaron. Permite construir una alerta de reconexion con el `frame_id` y el
+        `timestamp_ms` reales del primer frame que se procesara despues de reconectar,
+        sin tener que inventar un identificador ni usar un reloj distinto al del
+        stream."""
+        if self._siguiente_indice >= len(self._frames):
+            return None
+        return self._frames[self._siguiente_indice]
+
+    @property
+    def ultimo_frame_entregado(self) -> Frame | None:
+        """El ultimo frame que ya se entrego (o None si aun no se entrego ninguno) --
+        para vincular la alerta de interrupcion al `timestamp_ms` real del stream en
+        vez de a un reloj de pared distinto."""
+        if self._siguiente_indice == 0:
+            return None
+        return self._frames[self._siguiente_indice - 1]
+
     def __len__(self) -> int:
         return len(self._frames)
 
@@ -65,5 +85,10 @@ class FuenteConReconexion:
             if not self.esta_disponible():
                 raise FuenteError(f"{self._carpeta}: conexion perdida (fuente inaccesible)")
             frame = self._frames[self._siguiente_indice]
-            yield frame
+            # Se avanza el cursor ANTES de ceder el frame: asi `ultimo_frame_entregado`
+            # y `proximo_frame` ya reflejan la realidad apenas el consumidor recibe el
+            # valor (no recien en la siguiente llamada a next(), por como funcionan los
+            # generadores). El manejo de FuenteError no cambia: si falla el chequeo de
+            # disponibilidad de arriba, el cursor simplemente no avanza.
             self._siguiente_indice += 1
+            yield frame
