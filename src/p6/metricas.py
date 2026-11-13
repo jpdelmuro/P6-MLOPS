@@ -41,8 +41,11 @@ CATALOGO_BASE: tuple[MetricaBase, ...] = (
     MetricaBase(
         "G2",
         "antiguedad_ultimo_frame",
-        "Diferencia entre el reloj de la corrida y el timestamp del ultimo frame procesado. "
-        "Poblacion: todos los frames de la fuente activa.",
+        "Diferencia entre la hora de pared actual (datetime.now(UTC)) y el fecha_utc mas "
+        "reciente registrado en los eventos de la corrida -- no el timestamp_ms sintetico "
+        "del stream, que no avanza con el reloj de pared. Poblacion: todos los eventos de "
+        "la corrida con fecha_utc. Ver p6.portal.app._g2_antiguedad_ms (uso en vivo) y "
+        "evidencias/metricas/recalculo-metricas.md (una muestra registrada).",
         "milisegundos",
     ),
     MetricaBase(

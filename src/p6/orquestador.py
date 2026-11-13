@@ -35,6 +35,8 @@ from p6.reloj import Reloj
 class Clasificador(Protocol):
     def cargar_y_preprocesar(self, ruta_imagen: Path): ...  # devuelve un tensor de torch
     def inferir(self, entrada) -> Prediccion: ...
+    @property
+    def model_ref(self) -> str: ...  # identidad real de lo que esta instancia cargo (G6)
 
 
 def calcular_config_ref(
@@ -182,7 +184,10 @@ def ejecutar_corrida(
     capturas = PoliticaCapturas(carpeta_evidencias / "imagenes")
 
     proceso = iniciar_medicion_recursos()
-    model_ref = f"{cfg_modelo.modelo_ref}@{cfg_modelo.pesos}"
+    # G6 compara esto (lo que el clasificador reporta de si mismo) contra lo declarado
+    # en cfg_modelo -- si algun dia divergen, la metrica debe poder verlo (ver
+    # version_reportada_vs_esperada en p6.metricas y Clasificador.model_ref).
+    model_ref = clasificador.model_ref
 
     mediciones: list[Medicion] = []
     scores_ventana: list[float] = []

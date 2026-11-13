@@ -37,10 +37,20 @@ class ClasificadorPreentrenado:
         self._modelo.eval()
         self._transformar = pesos.transforms()
         self._clases = tuple(pesos.meta["categories"])
+        self._model_ref = f"torchvision.models.resnet18@{pesos}"
 
     @property
     def clases(self) -> tuple[str, ...]:
         return self._clases
+
+    @property
+    def model_ref(self) -> str:
+        """Identidad real del modelo que esta instancia realmente cargo (G6) --
+        construida desde los pesos efectivamente instanciados aqui arriba, nunca desde
+        `config/modelo.yaml`. Si la config declarara otro modelo pero este codigo
+        siguiera cargando resnet18, `model_ref` seguiria diciendo la verdad y G6 podria
+        detectar la discrepancia entre lo declarado y lo realmente cargado."""
+        return self._model_ref
 
     def cargar_y_preprocesar(self, ruta_imagen: str | Path) -> torch.Tensor:
         """Lectura/decodificacion + preprocesamiento -- deliberadamente separado de

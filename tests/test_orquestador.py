@@ -33,13 +33,16 @@ CFG_ALERTAS = ConfigAlertas(
 
 class ClasificadorFalso:
     """Doble de prueba: devuelve scores predeterminados en orden, sin cargar pesos
-    reales -- la misma interfaz dividida (`cargar_y_preprocesar`/`inferir`) que
-    `ClasificadorPreentrenado`. El fallo simulado ocurre en `cargar_y_preprocesar`,
-    igual que un fallo real de lectura de imagen."""
+    reales -- la misma interfaz dividida (`cargar_y_preprocesar`/`inferir`/`model_ref`)
+    que `ClasificadorPreentrenado`. El fallo simulado ocurre en `cargar_y_preprocesar`,
+    igual que un fallo real de lectura de imagen. `model_ref` es independiente de
+    cualquier `ConfigModelo` -- a proposito, para poder probar que G6 detecta una
+    discrepancia real entre lo declarado y lo que el clasificador reporta de si mismo."""
 
-    def __init__(self, scores: list[float | None]) -> None:
+    def __init__(self, scores: list[float | None], model_ref: str = "fake-model@v0") -> None:
         self._scores = iter(scores)
         self._siguiente_score: float | None = None
+        self.model_ref = model_ref
 
     def cargar_y_preprocesar(self, ruta_imagen):
         self._siguiente_score = next(self._scores)
@@ -298,6 +301,37 @@ def test_referencia_persiste_entre_corridas_via_ruta_referencia(tmp_path):
     assert len(alertas_sostenido) == 1  # solo se dispara si C2 hereda la referencia 0.0 de C1
     resultado_c2.almacen_eventos.cerrar()
     resultado_c2.almacen_alertas.cerrar()
+
+
+def test_model_ref_del_evento_viene_del_clasificador_no_de_la_config(tmp_path):
+    # G6 compara lo declarado en config/modelo.yaml contra lo que el evento reporta.
+    # Si el evento solo repitiera cfg_modelo, G6 nunca podria detectar una
+    # discrepancia real -- este doble declara un model_ref DISTINTO al de CFG_MODELO
+    # a proposito, y el evento debe reflejar el del clasificador, no el de la config.
+    from p6.metricas import version_reportada_vs_esperada
+
+    carpeta = _crear_imagenes(tmp_path / "stream", 1)
+    cfg_fuente = ConfigFuente(carpeta=str(carpeta), frecuencia_ms=100.0)
+    clasificador = ClasificadorFalso([0.95], model_ref="otro-modelo@v9")
+
+    resultado = ejecutar_corrida(
+        run_id="run-g6",
+        cfg_fuente=cfg_fuente,
+        cfg_modelo=CFG_MODELO,  # declara "torchvision.models.resnet18@..."
+        cfg_confianza=CFG_CONFIANZA,
+        cfg_alertas=CFG_ALERTAS,
+        reloj=RelojControlado(0.0),
+        carpeta_evidencias=tmp_path / "evidencias",
+        clasificador=clasificador,
+    )
+    eventos = resultado.almacen_eventos.listar(run_id="run-g6")
+    assert eventos[0]["model_ref"] == "otro-modelo@v9"  # del clasificador, no de CFG_MODELO
+
+    esperado = f"{CFG_MODELO.modelo_ref}@{CFG_MODELO.pesos}"
+    g6 = version_reportada_vs_esperada(eventos, esperado)
+    assert g6.coincide is False  # G6 SI detecta la discrepancia real
+    resultado.almacen_eventos.cerrar()
+    resultado.almacen_alertas.cerrar()
 
 
 def test_corrida_real_con_clasificador_preentrenado(tmp_path):

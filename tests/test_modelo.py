@@ -33,6 +33,12 @@ def test_hay_mil_clases_de_imagenet(clasificador):
     assert len(clasificador.clases) == 1000
 
 
+def test_model_ref_refleja_los_pesos_realmente_cargados(clasificador):
+    # G6 compara esto contra config/modelo.yaml -- debe venir del objeto real, no
+    # repetir la config a ciegas.
+    assert clasificador.model_ref == "torchvision.models.resnet18@ResNet18_Weights.IMAGENET1K_V1"
+
+
 def test_imagen_corrupta_lanza_modelo_error(clasificador, tmp_path):
     ruta = tmp_path / "corrupta.jpg"
     ruta.write_bytes(b"esto no es una imagen valida")

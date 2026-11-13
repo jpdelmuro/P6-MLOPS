@@ -61,7 +61,7 @@ for run in ["run-c1-normal", "run-c2-baja"]:
 | Metrica | run-c1-normal | run-c2-baja |
 |---|---:|---:|
 | G1 tiempo_inferencia_p50 (ms) -- solo `ClasificadorPreentrenado.inferir` | 6.607 | 7.058 |
-| G2 antiguedad_ultimo_frame (ms, fecha_utc real vs. ahora) | varia con el momento de la consulta (ver dashboard) |
+| G2 antiguedad_ultimo_frame (ms) -- muestra registrada al consultar en `2026-11-13T07:34:53Z` | 1067501.8 | 1066202.6 |
 | G3 RAM promedio (MB) | 385.38 | 382.83 |
 | G3 CPU promedio (%) -- puede superar 100 (multinucleo) | 134.86 | 173.02 |
 | G3 muestras | 9 | 10 |
@@ -73,10 +73,12 @@ for run in ["run-c1-normal", "run-c2-baja"]:
 G1 y G3 varian entre corridas porque dependen del hardware/carga del proceso en
 el momento de ejecutar (telemetria real, no un valor fijo); G1 cronometra solo
 `inferir` (nunca `cargar_y_preprocesar`, que hace la lectura/decodificacion de
-la imagen por separado -- ver `src/p6/modelo.py`). G2 no tiene un valor fijo
-reproducible en este documento porque depende de "ahora" en el momento de la
-consulta; es observable en vivo en `/dashboard?run_id=<corrida>` (extra F-01).
-G4 coincide exactamente con la proporcion de eventos en zona `baja_confianza`
+la imagen por separado -- ver `src/p6/modelo.py`). G2 crece con el tiempo real
+transcurrido desde la corrida (es "antiguedad": no es un valor fijo por
+diseño), por eso esta tabla fija un momento concreto de consulta en vez de un
+numero suelto -- recalcularlo ahora da un numero mayor, consistente con que
+paso mas tiempo; es observable en vivo en `/dashboard?run_id=<corrida>`
+(extra F-01). G4 coincide exactamente con la proporcion de eventos en zona `baja_confianza`
 reportada en `evidencias/escenarios/{normal,baja-confianza}/resumen-corrida-*.md`.
 G7 coincide con el numero de alertas listadas en cada `alertas.jsonl`.
 
