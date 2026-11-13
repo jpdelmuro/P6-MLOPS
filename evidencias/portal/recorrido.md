@@ -12,9 +12,11 @@ PYTHONPATH=src P6_EVIDENCIAS_DIR=evidencias/escenarios uvicorn p6.portal.app:app
 
 ## 2. Inicio -- `GET /`
 
-Lista las corridas disponibles (`run-c1-normal`, `run-c2-baja`, y
-`run-s-reconexion` si corriste el extra S), cada una con enlaces directos a
-sus eventos y alertas.
+Lista solo las corridas reales (las que tienen `eventos-<run_id>.db`, nunca
+las carpetas de documentacion `normal/`/`baja-confianza/`), cada una con
+enlaces directos a sus eventos, alertas y dashboard.
+
+![Inicio](capturas/01-inicio.png)
 
 ## 3. Eventos -- `GET /eventos?run_id=run-c2-baja`
 
@@ -24,11 +26,15 @@ e imagen (si se capturo). Filtrar por zona:
 `GET /eventos?run_id=run-c2-baja&zona=baja_confianza` reduce la tabla a los 4
 eventos en esa zona.
 
+![Eventos filtrados por zona baja_confianza](capturas/02-eventos-baja-confianza.png)
+
 ## 4. Alertas -- `GET /alertas?run_id=run-c2-baja`
 
 Tabla de las 4 alertas `baja-confianza-v1` de C2, cada una con `rule_id`,
 `timestamp_ms`, `severity`, `reason`, `accion sugerida`, y un enlace
 `event_id -> /imagenes?ruta=...` a la captura real que origino la alerta.
+
+![Alertas](capturas/03-alertas.png)
 
 ## 5. Imagen vinculada -- `GET /imagenes?ruta=evidencias/escenarios/run-c2-baja/imagenes/evt-run-c2-baja-baja_confianza_0003.jpg`
 
@@ -38,11 +44,21 @@ repo responde 403; una ruta inexistente, 404 -- ver
 `tests/test_portal.py::test_imagenes_rechaza_ruta_fuera_del_repositorio` y
 `test_imagenes_404_si_no_existe`).
 
+![Imagen vinculada servida por /imagenes](capturas/05-imagen-vinculada.png)
+
+`GET /imagenes?ruta=../../../etc/passwd` (una ruta fuera del repositorio)
+responde 403, no el archivo:
+
+![403 ante una ruta fuera del repositorio](capturas/06-imagenes-403.png)
+
 ## 6. Dashboard (extra F-01) -- `GET /dashboard?run_id=run-c2-baja`
 
-Vista agregada: conteo de eventos por zona, G1 (tiempo de inferencia p50), G3
-(uso de recursos), el histograma de confianza (extra M-01) y alertas por
-regla. Cambiar la corrida con el selector reconsulta todo en vivo.
+Vista agregada: conteo de eventos por zona, G1 (tiempo de inferencia p50), G2
+(antiguedad real del ultimo frame), G3 (uso de recursos), el histograma de
+confianza (extra M-01) y alertas por regla. Cambiar la corrida con el
+selector reconsulta todo en vivo.
+
+![Dashboard](capturas/04-dashboard.png)
 
 ## Estados verificados (no solo el camino feliz)
 
@@ -55,7 +71,7 @@ regla. Cambiar la corrida con el selector reconsulta todo en vivo.
   "sin datos" en vez de un error
   (`test_dashboard_sin_mediciones_reporta_sin_datos_en_g1_g3`).
 
-Las 11 pruebas de `tests/test_portal.py` cubren cada ruta descrita arriba con
+Las 14 pruebas de `tests/test_portal.py` cubren cada ruta descrita arriba con
 `fastapi.testclient.TestClient` sobre datos reales (nunca mockeados): son la
 evidencia "observado/reproducido" de este recorrido, ejecutable con
 `pytest tests/test_portal.py -q`.
