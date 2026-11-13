@@ -183,7 +183,7 @@ def cargar_confianza(ruta: str | Path) -> ConfigConfianza:
 
 # --- alertas.yaml ------------------------------------------------------------
 
-_TIPOS_REGLA = ("baja_confianza", "cambio_sostenido")
+_TIPOS_REGLA = ("baja_confianza", "cambio_sostenido", "fuente_interrumpida", "fuente_reconectada")
 _CLAVES_REGLA = ("id", "tipo", "severidad", "accion_sugerida")
 
 

@@ -1,0 +1,22 @@
+{
+  "run_id": "run-s-reconexion",
+  "total_frames": 9,
+  "frames_procesados": 9,
+  "reconexiones": 1,
+  "bitacora": [
+    {
+      "evento": "interrupcion_fisica",
+      "timestamp_ms": 173.38783398736268
+    },
+    {
+      "evento": "fuenteerror_detectado",
+      "timestamp_ms": 173.52000006940216,
+      "frames_antes_de_la_caida": 4
+    },
+    {
+      "evento": "reconexion_exitosa",
+      "timestamp_ms": 479.23570906277746,
+      "reanuda_en_indice": 4
+    }
+  ]
+}

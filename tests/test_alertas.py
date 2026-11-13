@@ -23,6 +23,18 @@ CFG_ALERTAS = ConfigAlertas(
             severidad="warning",
             accion_sugerida="investigar cambio",
         ),
+        ReglaAlerta(
+            id="fuente-interrumpida-v1",
+            tipo="fuente_interrumpida",
+            severidad="critical",
+            accion_sugerida="revisar conectividad",
+        ),
+        ReglaAlerta(
+            id="fuente-reconectada-v1",
+            tipo="fuente_reconectada",
+            severidad="info",
+            accion_sugerida="confirmar continuidad",
+        ),
     ),
 )
 
@@ -67,6 +79,37 @@ def test_evaluar_ventana_con_cambio_sostenido_genera_alerta_vinculada():
     assert alerta.rule_id == "cambio-sostenido-v1"
     assert alerta.event_ids == ("evt-1", "evt-2")
     assert "0.40" in alerta.reason
+
+
+def test_generar_alerta_fuente_interrumpida():
+    motor = MotorAlertas(CFG_ALERTAS, config_ref="config-v1")
+    alerta = motor.generar_alerta_fuente(
+        "fuente_interrumpida", timestamp_ms=3000.0, reason="carpeta inaccesible tras frame 4"
+    )
+    assert alerta is not None
+    assert alerta.rule_id == "fuente-interrumpida-v1"
+    assert alerta.severity == "critical"
+    assert alerta.reason == "carpeta inaccesible tras frame 4"
+
+
+def test_generar_alerta_fuente_reconectada_vinculada_a_eventos():
+    motor = MotorAlertas(CFG_ALERTAS, config_ref="config-v1")
+    alerta = motor.generar_alerta_fuente(
+        "fuente_reconectada",
+        timestamp_ms=4000.0,
+        reason="reanudada en frame 5",
+        event_ids=("evt-5", "evt-6"),
+    )
+    assert alerta is not None
+    assert alerta.rule_id == "fuente-reconectada-v1"
+    assert alerta.severity == "info"
+    assert alerta.event_ids == ("evt-5", "evt-6")
+
+
+def test_generar_alerta_fuente_sin_regla_configurada_es_none():
+    cfg_sin_reglas_de_fuente = ConfigAlertas(version=1, reglas=CFG_ALERTAS.reglas[:2])
+    motor = MotorAlertas(cfg_sin_reglas_de_fuente, config_ref="config-v1")
+    assert motor.generar_alerta_fuente("fuente_interrumpida", 1000.0, "x") is None
 
 
 def test_evaluar_ventana_sin_cambio_sostenido_no_genera_alerta():

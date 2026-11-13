@@ -62,6 +62,31 @@ class MotorAlertas:
             suggested_action=regla.accion_sugerida,
         )
 
+    def generar_alerta_fuente(
+        self,
+        tipo: str,
+        timestamp_ms: float,
+        reason: str,
+        event_ids: tuple[str, ...] = (),
+    ) -> Alerta | None:
+        """Genera una alerta para una condicion de la fuente (interrupcion/reconexion,
+        extra S) -- no depende de un evento individual ni de una ventana de confianza,
+        a diferencia de las otras dos reglas, pero usa la misma regla declarada en
+        config/alertas.yaml (severidad, accion_sugerida) y el mismo almacen."""
+        regla = self._cfg.regla(tipo)
+        if regla is None:
+            return None
+        return Alerta(
+            alert_id=self._siguiente_id(tipo.replace("fuente_", "")[:2]),
+            rule_id=regla.id,
+            timestamp_ms=timestamp_ms,
+            severity=regla.severidad,
+            event_ids=event_ids,
+            config_ref=self._config_ref,
+            reason=reason,
+            suggested_action=regla.accion_sugerida,
+        )
+
     def evaluar_ventana(
         self, resultado: ResultadoVentana, event_ids: list[str], timestamp_ms: float
     ) -> Alerta | None:

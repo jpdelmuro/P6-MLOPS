@@ -91,8 +91,9 @@ PYTHONPATH=src P6_EVIDENCIAS_DIR=evidencias/escenarios uvicorn p6.portal.app:app
 ```
 
 Abre `http://127.0.0.1:8000/` -- lista las corridas disponibles, `/eventos`
-(filtrable por corrida y zona) y `/alertas` (con regla, motivo, severidad,
-accion sugerida y enlace a la imagen vinculada).
+(filtrable por corrida y zona), `/alertas` (con regla, motivo, severidad,
+accion sugerida y enlace a la imagen vinculada) y `/dashboard` (extra F, ver
+"Extras").
 
 ## Configuracion (`config/`)
 
@@ -102,7 +103,8 @@ accion sugerida y enlace a la imagen vinculada).
   `evidencias/metricas/calibracion-confianza.md`), tamano de ventana, minimo de
   muestras y regla de cambio sostenido.
 - `alertas.yaml`: identidad, severidad y accion sugerida de cada regla
-  (`baja-confianza-v1`, `cambio-sostenido-v1`).
+  (`baja-confianza-v1`, `cambio-sostenido-v1`, `fuente-interrumpida-v1` y
+  `fuente-reconectada-v1`, estas dos ultimas para el extra S).
 
 ## Metricas (R2) -- una por grupo G1-G7
 
@@ -118,6 +120,24 @@ accion sugerida y enlace a la imagen vinculada).
 
 Definiciones completas (M1) en `src/p6/metricas.py::CATALOGO_BASE`.
 
+## Extras (puntos adicionales)
+
+Tres elementos distintos, inventario completo con evidencia en
+`evidencias/extras/inventario.md`:
+
+- **M-01 -- Distribucion de confianza:** `distribucion_confianza` en
+  `src/p6/metricas.py`, histograma de scores distinto de la metrica base de G4.
+- **F-01 -- Dashboard del portal:** `/dashboard?run_id=...`, conteos por zona,
+  G1/G3, el histograma de M-01 y alertas por regla, con estados vacios/erroneos
+  manejados y probados.
+- **S-01 -- Interrupcion y reconexion real de la fuente:**
+  `src/p6/reconexion.py::FuenteConReconexion` + `scripts/escenario_reconexion.py`
+  -- interrumpe de verdad el acceso a la carpeta de origen a mitad de una
+  corrida (no se simula narrativamente), detecta el `FuenteError` real, lo
+  registra como alerta (`fuente-interrumpida-v1`), restaura el acceso,
+  reconecta y reanuda sin reprocesar ni saltar frames
+  (`fuente-reconectada-v1`). Correr con `python3 scripts/escenario_reconexion.py`.
+
 ## Pruebas y calidad
 
 ```bash
@@ -126,7 +146,7 @@ ruff format --check .
 pytest -q
 ```
 
-110 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
+123 pruebas, todas en verde; CI (`.github/workflows/ci.yml`) corre lo mismo en
 cada push/PR a `main`.
 
 ## Limites conocidos

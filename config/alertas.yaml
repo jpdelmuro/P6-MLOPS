@@ -10,3 +10,11 @@ reglas:
     tipo: cambio_sostenido
     severidad: warning
     accion_sugerida: "Investigar un posible cambio sostenido de confianza frente a la referencia."
+  - id: fuente-interrumpida-v1
+    tipo: fuente_interrumpida
+    severidad: critical
+    accion_sugerida: "Revisar la conectividad/disponibilidad de la fuente y reintentar."
+  - id: fuente-reconectada-v1
+    tipo: fuente_reconectada
+    severidad: info
+    accion_sugerida: "Confirmar continuidad de frame_id sin huecos ni duplicados tras la reconexion."

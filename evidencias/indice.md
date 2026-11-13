@@ -62,7 +62,18 @@ en el momento de la revision.
 | R7.2 | Este archivo (`evidencias/indice.md`) + `evidencias/escenarios/` + `evidencias/metricas/calibracion-confianza.md` | Evidencia organizada por criterio, con comando exacto para reproducir o recalcular cada muestra. |
 | R7.3 | README.md ("Autoria y procedencia"), `evidencias/escenarios/baja-confianza/procedencia-imagenes.md` | Autoria individual, componentes reutilizados (imagenes de baja confianza, Proyecto 3) y procedencia del modelo (preentrenado, sin entrenamiento propio) declarados explicitamente. |
 
+## Extras reclamados (sin limite, se suman al puntaje base)
+
+Ver `evidencias/extras/inventario.md` para el detalle completo (ID, tipo, nivel
+solicitado, evidencia) de cada uno:
+
+| ID | Tipo | Elemento | Nivel solicitado |
+|---|---|---|---|
+| M-01 | Metrica adicional | Distribucion de confianza (histograma) | 5 |
+| F-01 | Funcionalidad opcional | Dashboard del portal | 10 |
+| S-01 | Escenario adicional | Interrupcion y reconexion real de la fuente | 8 |
+
 ## Verificacion tecnica
 
-`ruff check .`, `ruff format --check .` y `pytest -q` (110 pruebas) en verde;
+`ruff check .`, `ruff format --check .` y `pytest -q` (123 pruebas) en verde;
 CI (`.github/workflows/ci.yml`) corre lo mismo en cada push/PR a `main`.
