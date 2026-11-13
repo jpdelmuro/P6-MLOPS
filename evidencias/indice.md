@@ -6,6 +6,13 @@ commit de referencia de cada bloque de evidencia es el commit donde se agrego
 (`git log --oneline -- <archivo>`); la revision evaluada es el `HEAD` de `main`
 en el momento de la revision.
 
+**Revision de referencia:** `20537ea` (rama `main`,
+`github.com/jpdelmuro/P6-MLOPS`) -- un commit no puede contener su propio
+hash, asi que este indice referencia el commit inmediatamente anterior a si
+mismo. El commit que agrega esta linea es uno despues de `20537ea`; ambas
+revisiones son consecutivas y la diferencia entre ellas es unicamente esta
+actualizacion del indice.
+
 ## R1 -- Integracion de fuente visual y modelo (15 pts)
 
 | Criterio | Archivo / comando | Resultado |
